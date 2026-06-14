@@ -69,7 +69,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     <>
       <DashboardSidebar isOpen={isMobileMenuOpen} setIsOpen={setIsMobileMenuOpen} />
       <div className="flex-1 flex flex-col min-w-0 bg-zinc-950 relative">
-        <header className="h-16 px-4 lg:px-8 flex items-center justify-between lg:justify-end /50 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-30">
+        <header className="h-16 shrink-0 px-4 lg:px-8 flex items-center justify-between lg:justify-end bg-zinc-950/80 backdrop-blur-md sticky top-0 z-30">
           <div className="flex items-center lg:hidden">
             <button
               onClick={() => setIsMobileMenuOpen(true)}

@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${roboto.variable} font-sans bg-zinc-950 text-zinc-100 flex h-screen overflow-hidden`}>
+      <body className={`${inter.variable} ${roboto.variable} font-sans bg-zinc-950 text-zinc-100 flex h-[100dvh] overflow-hidden`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
