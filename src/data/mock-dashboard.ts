@@ -43,12 +43,19 @@ export interface InterviewQuestion {
   hints: string[];
 }
 
-export interface Topic {
+export interface CourseModule {
   id: string;
   courseId: string;
   title: string;
+  order: number;
+}
+
+export interface Topic {
+  id: string;
+  courseId: string;
+  moduleId: string;
+  title: string;
   description: string;
-  module: string;
   video: Video;
   mcqs: MCQQuestion[];
   interviewQuestions: InterviewQuestion[];
@@ -92,13 +99,18 @@ export const mockCourses: Course[] = [
   }
 ];
 
+export const mockModules: CourseModule[] = [
+  { id: "mod-fs-1", courseId: "course-fullstack", title: "Module 1: The Basics", order: 1 },
+  { id: "mod-fs-2", courseId: "course-fullstack", title: "Module 2: Frontend Mastery", order: 2 }
+];
+
 export const mockTopics: Topic[] = [
   {
     id: "topic-fs-1",
     courseId: "course-fullstack",
     title: "Introduction to Full-Stack Architecture",
     description: "Understand the high-level architecture of a modern web application, including frontend, backend, and databases.",
-    module: "Module 1: The Basics",
+    moduleId: "mod-fs-1",
     video: {
       id: "vid-1",
       title: "How the Web Works",
@@ -132,7 +144,7 @@ export const mockTopics: Topic[] = [
     courseId: "course-fullstack",
     title: "Advanced React Patterns",
     description: "Deep dive into React performance, custom hooks, and context API.",
-    module: "Module 2: Frontend Mastery",
+    moduleId: "mod-fs-2",
     video: {
       id: "vid-2",
       title: "Mastering Custom Hooks",
@@ -155,13 +167,56 @@ export const mockTopics: Topic[] = [
   }
 ];
 
-export const mockMentorshipQA = [
+export interface QAReply {
+  id: string;
+  authorName: string;
+  authorRole: "student" | "mentor" | "admin";
+  content: string;
+  date: string;
+  imageUrls?: string[];
+}
+
+export interface MentorshipQA {
+  id: string;
+  studentName: string;
+  courseId: string;
+  question: string;
+  imageUrls?: string[];
+  replies: QAReply[];
+  status: "pending" | "answered";
+  date: string;
+}
+
+export const mockMentorshipQA: MentorshipQA[] = [
   {
     id: "qa-1",
     studentName: "Alex Developer",
     courseId: "course-fullstack",
-    question: "I am having trouble understanding when to use Redux vs Context API.",
-    mentorReply: "Context API is great for low-frequency updates like theme or user auth state. Redux is better suited for complex state logic.",
+    question: "I am having trouble understanding when to use Redux vs Context API. Could someone explain the best use cases for each?",
+    replies: [
+      {
+        id: "rep-1",
+        authorName: "Senior Mentor",
+        authorRole: "mentor",
+        content: "Context API is great for low-frequency updates like theme or user auth state. Redux is better suited for complex, rapidly changing state logic where you need time-travel debugging.",
+        date: "2026-06-12 14:30"
+      },
+      {
+        id: "rep-2",
+        authorName: "Alex Developer",
+        authorRole: "student",
+        content: "That makes sense! So for a simple shopping cart, Context API should be enough right? Like this structure I have here:",
+        date: "2026-06-12 15:05",
+        imageUrls: ["https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=800&q=80", "https://images.unsplash.com/photo-1542831371-29b0f74f9713?w=800&q=80"]
+      },
+      {
+        id: "rep-3",
+        authorName: "Senior Mentor",
+        authorRole: "mentor",
+        content: "Exactly! Unless the cart has extremely complex conditional logic or huge data structures, Context will perform perfectly fine.",
+        date: "2026-06-12 15:45"
+      }
+    ],
     status: "answered",
     date: "2026-06-12"
   },
@@ -170,7 +225,7 @@ export const mockMentorshipQA = [
     studentName: "Sarah Designer",
     courseId: "course-uiux",
     question: "Should I always use an 8px grid for spacing in Figma?",
-    mentorReply: null,
+    replies: [],
     status: "pending",
     date: "2026-06-13"
   },
@@ -179,7 +234,7 @@ export const mockMentorshipQA = [
     studentName: "Mike Data",
     courseId: "course-data",
     question: "What is the primary difference between Pandas and NumPy when manipulating large datasets?",
-    mentorReply: null,
+    replies: [],
     status: "pending",
     date: "2026-06-13"
   }
@@ -234,5 +289,149 @@ export const mockUsersDB: User[] = [
     enrolledCourseIds: ["course-data"],
     progressPercentage: 80,
     completedTopicIds: []
+  }
+];
+
+export interface AppNotification {
+  id: string;
+  userId: string | 'all'; // 'all' for system-wide, or specific user ID
+  targetRole?: Role; // If userId is 'all', restrict by role
+  title: string;
+  message: string;
+  isRead: boolean;
+  date: string;
+  type: 'info' | 'success' | 'warning' | 'alert';
+}
+
+export const mockNotifications: AppNotification[] = [
+  {
+    id: 'notif-1',
+    userId: 'usr-student-1',
+    title: 'Mentor Replied',
+    message: 'Your mentor has replied to your Q&A question regarding Redux vs Context API.',
+    isRead: false,
+    date: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 mins ago
+    type: 'success'
+  },
+  {
+    id: 'notif-2',
+    userId: 'all',
+    targetRole: 'student',
+    title: 'New Course Material',
+    message: 'A new module has been added to Elite Full-Stack Development.',
+    isRead: false,
+    date: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
+    type: 'info'
+  },
+  {
+    id: 'notif-3',
+    userId: 'usr-mentor',
+    title: 'New Mentee Assigned',
+    message: 'Alex Developer has been assigned to you as a mentee.',
+    isRead: false,
+    date: new Date(Date.now() - 1000 * 60 * 120).toISOString(), // 2 hours ago
+    type: 'info'
+  },
+  {
+    id: 'notif-4',
+    userId: 'all',
+    targetRole: 'mentor',
+    title: 'Pending Q&A',
+    message: 'Sarah Designer asked a new question in UI/UX Design Masterclass.',
+    isRead: true,
+    date: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // 2 days ago
+    type: 'warning'
+  },
+  {
+    id: 'notif-5',
+    userId: 'usr-admin',
+    title: 'New Registration',
+    message: 'New student Mike Data has completed registration.',
+    isRead: false,
+    date: new Date(Date.now() - 1000 * 60 * 60 * 3).toISOString(), // 3 hours ago
+    type: 'info'
+  }
+];
+
+export interface Assignment {
+  id: string;
+  studentId: string;
+  mentorId: string;
+  courseId: string;
+  title: string;
+  description: string;
+  status: 'pending_submission' | 'submitted' | 'approved' | 'rejected';
+  repoUrl?: string;
+  fileName?: string; // New field for ZIP upload
+  assignedAt: string;
+  dueDate?: string;
+  submittedAt?: string;
+}
+
+export const mockAssignmentsDB: Assignment[] = [
+  {
+    id: "ass-1",
+    studentId: "usr-student-1",
+    mentorId: "usr-mentor",
+    courseId: "course-fullstack",
+    title: "Final Project: Full-Stack E-Commerce Platform",
+    description: `For your final project, you will build a complete, production-ready E-Commerce platform. This assignment is designed to test your mastery of the entire full-stack lifecycle.
+
+Technical Requirements:
+1. Frontend (Next.js & Tailwind CSS):
+   - Build a responsive, accessible UI with product grids, individual product pages, and a functional shopping cart.
+   - Implement state management using React Context or Redux for the cart and user session.
+   - Design a premium, modern aesthetic using glassmorphism and smooth Framer Motion transitions.
+
+2. Backend (Node.js & Express / Next.js API Routes):
+   - Create a secure RESTful API to handle product fetching, user authentication, and order processing.
+   - Implement role-based access control (Admin vs Customer). Admin should be able to add/remove products.
+
+3. Database (PostgreSQL & Prisma):
+   - Design a relational schema including Users, Products, Orders, and OrderItems.
+   - Ensure proper indexing and foreign key constraints.
+
+4. Integrations:
+   - Integrate Stripe for payment processing (Test Mode).
+   - Implement NextAuth for Google OAuth and email/password login.
+
+Submission Guidelines:
+You must provide the link to your GitHub repository containing the full source code, a comprehensive README.md with setup instructions, and upload a compiled .zip file of your final build. Your code will be reviewed for clean architecture, performance, and UI/UX best practices. Good luck!`,
+    status: "pending_submission",
+    assignedAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
+    dueDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(), // Due in 7 days
+  },
+  {
+    id: "ass-2",
+    studentId: "usr-student-1",
+    mentorId: "usr-mentor",
+    courseId: "course-fullstack",
+    title: "Capstone Project: Real-Time Chat Application",
+    description: `Build a real-time messaging application similar to Discord or Slack.
+    
+Key features must include:
+- Real-time WebSocket communication using Socket.io.
+- Channel-based chat rooms.
+- Direct messaging between users.
+- Online/offline presence indicators.
+- File attachment sharing (mocked storage).
+
+Please ensure your database is optimized for heavy read/write chat operations.`,
+    status: "approved",
+    repoUrl: "https://github.com/alex-dev/chat-app",
+    fileName: "chat-app-final.zip",
+    assignedAt: new Date(Date.now() - 1000 * 60 * 60 * 120).toISOString(),
+    dueDate: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(), // Was due 2 days ago
+    submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+  },
+  {
+    id: "ass-3",
+    studentId: "usr-student-2",
+    mentorId: "usr-mentor",
+    courseId: "course-uiux",
+    title: "Figma Component Library",
+    description: "Design a scalable design system in Figma.",
+    status: "pending_submission",
+    assignedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
   }
 ];

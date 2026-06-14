@@ -44,7 +44,8 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setI
       default:
         return [
           { name: "My Dashboard", href: "/", icon: LayoutDashboard },
-          { name: "My Courses", href: "/courses", icon: GraduationCap },
+          { name: "Course Modules", href: "/courses", icon: BookOpen },
+          { name: "Assignments", href: "/assignments", icon: FileText },
           { name: "Mentorship Q&A", href: "/qa", icon: MessageCircleQuestion },
           { name: "Certificates", href: "/certificates", icon: ShieldCheck },
         ];
@@ -57,7 +58,7 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setI
     <>
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/80 z-40 lg:hidden" 
+          className="fixed inset-0 bg-zinc-50/50 dark:bg-black/80 z-40 lg:hidden" 
           onClick={() => setIsOpen?.(false)}
         />
       )}
@@ -83,13 +84,13 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setI
                 onClick={() => setIsOpen?.(false)}
                 className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                   isActive
-                    ? "bg-cyan-950 text-cyan-400"
+                    ? "bg-cyan-400 text-zinc-950 font-bold"
                     : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
                 }`}
               >
                 <item.icon
                   className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                    isActive ? "text-cyan-400" : "text-zinc-500 group-hover:text-zinc-300"
+                    isActive ? "text-zinc-950" : "text-zinc-500 group-hover:text-zinc-300"
                   }`}
                   aria-hidden="true"
                 />

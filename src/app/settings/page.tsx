@@ -10,16 +10,16 @@ export default function SettingsPage() {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center">
         <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white mb-2">Access Denied</h1>
         <p className="text-zinc-400">You must be an administrator to view this page.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto pb-12 w-full">
+    <div className="w-full pb-12 ">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center">
+        <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-6 flex items-center">
           <SettingsIcon className="w-8 h-8 mr-3 text-cyan-400" />
           Global Settings
         </h1>
@@ -35,12 +35,12 @@ export default function SettingsPage() {
           </div>
           <div className="p-6 space-y-6">
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-2">Platform Name</label>
-              <input type="text" defaultValue="Elite Mentorship Portal" className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all" />
+              <label className="block text-sm font-medium text-zinc-300 mb-1.5">Platform Name</label>
+              <input type="text" defaultValue="Elite Mentorship Portal" className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-2">Support Email</label>
-              <input type="email" defaultValue="support@elite.com" className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all" />
+              <label className="block text-sm font-medium text-zinc-300 mb-1.5">Support Email</label>
+              <input type="email" defaultValue="support@elite.com" className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all" />
             </div>
           </div>
         </section>
@@ -77,7 +77,7 @@ export default function SettingsPage() {
         </section>
 
         <div className="flex justify-end">
-          <button className="flex items-center px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors">
+          <button className="inline-flex items-center justify-center px-4 py-2.5 bg-cyan-400 hover:bg-cyan-500 text-zinc-950 font-bold text-sm font-medium rounded-lg transition-colors cursor-pointer">
             <Save className="w-5 h-5 mr-2" />
             Save Changes
           </button>

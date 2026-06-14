@@ -5,6 +5,10 @@ import { useAuth } from "@/components/dashboard/auth-provider";
 import { mockUsersDB, mockCourses } from "@/data/mock-dashboard";
 import { Users as UsersIcon, Search, ShieldAlert, Edit, Trash2, Plus } from "lucide-react";
 import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default function UsersPage() {
   const { user } = useAuth();
@@ -68,17 +72,17 @@ export default function UsersPage() {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center">
         <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white mb-2">Access Denied</h1>
         <p className="text-zinc-400">You must be an administrator to view this page.</p>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto pb-12 w-full">
+    <div className="w-full pb-12 ">
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-2 flex items-center">
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-6 flex items-center">
             <UsersIcon className="w-8 h-8 mr-3 text-cyan-400" />
             User Management
           </h1>
@@ -90,20 +94,22 @@ export default function UsersPage() {
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-5 w-5 text-zinc-500" />
             </div>
-            <input
+            <Input
               type="text"
-              className="block w-full md:w-64 pl-10 pr-3 py-2 border border-zinc-800 rounded-lg bg-zinc-900 text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-colors sm:text-sm"
+              className="md:w-64 pl-10"
               placeholder="Search users..."
             />
           </div>
-          <Link href="/users/new" className="px-4 py-2 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors flex items-center shrink-0">
-            <Plus className="w-5 h-5 mr-1" />
-            Add User
+          <Link href="/users/new" tabIndex={-1}>
+            <Button className="shrink-0">
+              <Plus className="w-5 h-5 mr-1" />
+              Add User
+            </Button>
           </Link>
         </div>
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xl">
+      <Card className="rounded-xl overflow-hidden shadow-xl border-0 p-0">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm text-zinc-400">
             <thead className="text-xs text-zinc-500 uppercase bg-zinc-950 border-b border-zinc-800">
@@ -128,23 +134,15 @@ export default function UsersPage() {
                   </td>
                   <td className="px-6 py-4">{u.email}</td>
                   <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded text-xs font-medium capitalize ${
-                      u.role === 'admin' ? 'bg-purple-950 text-purple-400' :
-                      u.role === 'mentor' ? 'bg-blue-950 text-blue-400' :
-                      'bg-zinc-800 text-zinc-300'
-                    }`}>
+                    <Badge variant={u.role === 'admin' ? 'outline' : u.role === 'mentor' ? 'secondary' : 'default'} className="capitalize">
                       {u.role}
-                    </span>
+                    </Badge>
                   </td>
                   <td className="px-6 py-4">
                     {u.role === "student" ? (
-                      <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${
-                        u.plan === 'elite' ? 'bg-indigo-950/50 text-indigo-400 border border-indigo-900/50' :
-                        u.plan === 'premium' ? 'bg-yellow-950/30 text-yellow-500 border border-yellow-900/50' :
-                        'bg-zinc-900 text-zinc-500 border border-zinc-800'
-                      }`}>
+                      <Badge variant={u.plan === 'elite' ? 'success' : 'outline'} className="uppercase tracking-wider">
                         {u.plan || 'none'}
-                      </span>
+                      </Badge>
                     ) : (
                       <span className="text-zinc-600 text-xs italic">N/A</span>
                     )}
@@ -173,19 +171,21 @@ export default function UsersPage() {
                     )}
                   </td>
                   <td className="px-6 py-4 text-right flex justify-end items-center gap-1">
-                    <Link href={`/users/${u.id}/edit`} className="text-zinc-400 hover:text-cyan-400 p-2 transition-colors">
-                      <Edit className="w-4 h-4" />
+                    <Link href={`/users/${u.id}/edit`}>
+                      <Button variant="ghost" size="icon">
+                        <Edit className="w-4 h-4" />
+                      </Button>
                     </Link>
-                    <button className="text-zinc-400 hover:text-red-400 p-2 transition-colors">
+                    <Button variant="danger" size="icon">
                       <Trash2 className="w-4 h-4" />
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

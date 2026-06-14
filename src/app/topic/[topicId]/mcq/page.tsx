@@ -64,7 +64,7 @@ export default function MCQPage({ params }: { params: Promise<{ topicId: string 
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.5 }}
-        className="max-w-3xl mx-auto py-16 px-4"
+        className="w-full py-16 px-4"
       >
         <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-12 shadow-2xl relative overflow-hidden text-center">
           <div className={`absolute top-0 left-0 w-full h-2 ${isPassed ? 'bg-green-500' : 'bg-red-500'}`}></div>
@@ -75,13 +75,13 @@ export default function MCQPage({ params }: { params: Promise<{ topicId: string 
             transition={{ type: "spring", delay: 0.2 }}
             className={`w-28 h-28 mx-auto rounded-full flex items-center justify-center mb-8 border-4 ${isPassed ? 'bg-green-950/30 border-green-500/50 text-green-400' : 'bg-red-950/30 border-red-500/50 text-red-400'}`}
           >
-            <span className="text-4xl font-bold">{finalPercentage}%</span>
+            <span className="text-2xl font-bold tracking-tight">{finalPercentage}%</span>
           </motion.div>
 
-          <h2 className="text-4xl font-bold text-white mb-4">
+          <h2 className="text-lg font-bold tracking-tight text-white mb-4">
             {isPassed ? "Outstanding Work!" : "Keep Practicing!"}
           </h2>
-          <p className="text-xl text-zinc-400 mb-10">
+          <p className="text-sm text-zinc-400 mb-10">
             You scored <span className="text-white font-bold">{score}</span> out of {questions.length} questions correctly.
           </p>
 
@@ -101,7 +101,7 @@ export default function MCQPage({ params }: { params: Promise<{ topicId: string 
             </button>
             <Link 
               href={`/topic/${topic.id}/interview`}
-              className="px-8 py-4 rounded-xl font-bold bg-cyan-600 text-white hover:bg-cyan-500 transition-colors flex items-center w-full sm:w-auto justify-center shadow-[0_0_20px_rgba(8,145,178,0.3)]"
+              className="px-8 py-4 rounded-xl font-bold bg-cyan-400 text-zinc-950 font-bold hover:bg-cyan-500 transition-colors flex items-center w-full sm:w-auto justify-center shadow-[0_0_20px_rgba(8,145,178,0.3)]"
             >
               Continue to Interview Prep
               <ChevronRight className="w-5 h-5 ml-2" />
@@ -113,7 +113,7 @@ export default function MCQPage({ params }: { params: Promise<{ topicId: string 
   }
 
   return (
-    <div className="max-w-6xl mx-auto pb-24 w-full">
+    <div className="w-full pb-24 ">
       <Link href={`/topic/${topic.id}`} className="inline-flex items-center text-sm font-medium text-zinc-400 hover:text-cyan-400 mb-8 transition-colors">
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to {topic.title}
@@ -144,7 +144,7 @@ export default function MCQPage({ params }: { params: Promise<{ topicId: string 
           transition={{ duration: 0.3 }}
           className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 sm:p-12 shadow-2xl"
         >
-          <h2 className="text-2xl sm:text-3xl text-white font-bold mb-10 leading-snug">
+          <h2 className="text-lg font-bold text-white mb-10 leading-snug">
             {currentQuestion.question}
           </h2>
 
@@ -179,7 +179,7 @@ export default function MCQPage({ params }: { params: Promise<{ topicId: string 
                   <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-sm mr-5 shrink-0 transition-colors ${letterStyle}`}>
                     {LETTERS[idx]}
                   </div>
-                  <span className="text-lg font-medium flex-1">{option.text}</span>
+                  <span className="text-sm font-medium flex-1">{option.text}</span>
                   
                   {isSubmitted && isCorrectOption && <CheckCircle className="w-6 h-6 text-green-500 ml-3 shrink-0" />}
                   {isSubmitted && isSelected && !isCorrectOption && <XCircle className="w-6 h-6 text-red-500 ml-3 shrink-0" />}
@@ -217,16 +217,16 @@ export default function MCQPage({ params }: { params: Promise<{ topicId: string 
                 disabled={!selectedOption}
                 className={`px-8 py-4 rounded-xl font-bold transition-all flex items-center justify-center w-full sm:w-auto ${
                   selectedOption 
-                    ? "bg-cyan-600 text-white hover:bg-cyan-500 shadow-[0_0_20px_rgba(8,145,178,0.3)]" 
+                    ? "bg-cyan-400 text-zinc-950 font-bold hover:bg-cyan-500 shadow-[0_0_20px_rgba(8,145,178,0.3)]" 
                     : "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-                }`}
+                } cursor-pointer`}
               >
                 Check Answer
               </button>
             ) : (
               <button
                 onClick={handleNext}
-                className="px-8 py-4 rounded-xl font-bold bg-white text-black hover:bg-zinc-200 transition-all flex items-center justify-center w-full sm:w-auto"
+                className="px-8 py-4 rounded-xl font-bold bg-white text-black hover:bg-zinc-200 transition-all flex items-center justify-center w-full sm:w-auto cursor-pointer"
               >
                 {currentQuestionIndex < questions.length - 1 ? 'Continue' : 'View Results'}
                 <ChevronRight className="w-5 h-5 ml-2" />

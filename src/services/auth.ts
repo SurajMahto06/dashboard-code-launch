@@ -12,7 +12,7 @@ export const authService = {
    * Simulates an API call to login a user with email and password.
    * In a real app, this would be a fetch/axios call to your backend.
    */
-  async login(email: string, password: string):Promise<User> {
+  async login(email: string, password: string): Promise<User> {
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 800));
 
@@ -20,7 +20,7 @@ export const authService = {
     if (!email || !password) {
       throw new AuthError("Email and password are required.");
     }
-    
+
     if (password.length < 6) {
       throw new AuthError("Password must be at least 6 characters long.");
     }

@@ -11,7 +11,7 @@ export default function MenteesPage() {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center">
         <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white mb-2">Access Denied</h1>
         <p className="text-zinc-400">You must be a mentor to view this page.</p>
       </div>
     );
@@ -20,9 +20,9 @@ export default function MenteesPage() {
   const mentees = mockUsersDB.filter(u => user.menteeIds?.includes(u.id));
 
   return (
-    <div className="max-w-6xl mx-auto pb-12 w-full">
+    <div className="w-full pb-12 ">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2 flex items-center">
+        <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-6 flex items-center">
           <Users className="w-8 h-8 mr-3 text-cyan-400" />
           My Mentees
         </h1>
@@ -34,15 +34,15 @@ export default function MenteesPage() {
           <div key={mentee.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-cyan-950 flex items-center justify-center text-cyan-400 font-bold text-xl">
+                <div className="w-12 h-12 rounded-full bg-cyan-950 flex items-center justify-center text-cyan-400 font-bold text-sm">
                   {mentee.name.charAt(0)}
                 </div>
                 <div>
-                  <h3 className="font-bold text-white">{mentee.name}</h3>
+                  <h3 className="text-base font-semibold text-white">{mentee.name}</h3>
                   <p className="text-xs text-zinc-500">{mentee.email}</p>
                 </div>
               </div>
-              <button className="text-zinc-500 hover:text-white transition-colors">
+              <button className="text-zinc-500 hover:text-white transition-colors cursor-pointer">
                 <MoreVertical className="w-5 h-5" />
               </button>
             </div>
@@ -67,7 +67,7 @@ export default function MenteesPage() {
                   {mentee.enrolledCourseIds?.map(id => mockCourses.find(c => c.id === id)?.title).join(', ') || "None"}
                 </span>
               </div>
-              <button className="p-2 bg-zinc-800 hover:bg-cyan-600 text-white rounded-lg transition-colors" title="Message Mentee">
+              <button className="p-2 bg-zinc-800 hover:bg-cyan-600 text-white rounded-lg transition-colors cursor-pointer" title="Message Mentee">
                 <MessageCircle className="w-4 h-4" />
               </button>
             </div>

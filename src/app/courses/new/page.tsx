@@ -21,7 +21,7 @@ export default function NewCoursePage() {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center">
         <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-2xl font-bold text-white mb-2">Access Denied</h1>
+        <h1 className="text-xl md:text-2xl font-bold text-white mb-2">Access Denied</h1>
         <p className="text-zinc-400">You must be an administrator to create courses.</p>
       </div>
     );
@@ -61,14 +61,14 @@ export default function NewCoursePage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto pb-12 w-full">
+    <div className="w-full pb-12 ">
       <Link href="/courses" className="inline-flex items-center text-sm text-zinc-400 hover:text-cyan-400 mb-6 transition-colors">
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to Course Builder
       </Link>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">
+        <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-6">
           Create New Course
         </h1>
         <p className="text-zinc-400">Define the core details of your new elite learning program.</p>
@@ -77,31 +77,31 @@ export default function NewCoursePage() {
       <form onSubmit={handleCreateCourse} className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 shadow-xl space-y-8">
         
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">Course Title</label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1.5">Course Title</label>
           <input 
             value={title} 
             onChange={e => setTitle(e.target.value)} 
             type="text" 
             placeholder="e.g. Advanced System Design" 
             required
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all" 
+            className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all" 
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">Description</label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1.5">Description</label>
           <textarea 
             value={description} 
             onChange={e => setDescription(e.target.value)} 
             rows={4} 
             required
             placeholder="What will students learn in this course? Provide a compelling overview." 
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-3 text-white focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 outline-none transition-all resize-none" 
+            className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all" 
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2 flex items-center">
+          <label className="block text-xs font-medium text-zinc-300 mb-2 flex items-center">
             <ImageIcon className="w-4 h-4 mr-2" />
             Course Thumbnail (Image Upload)
           </label>
@@ -135,7 +135,7 @@ export default function NewCoursePage() {
           <button 
             type="submit" 
             disabled={isSaving || !title || !description}
-            className="flex items-center px-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-medium rounded-lg transition-colors shadow-[0_0_20px_rgba(8,145,178,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center px-4 py-2 text-sm bg-cyan-400 hover:bg-cyan-500 text-zinc-950 font-bold font-medium rounded-lg transition-colors shadow-[0_0_20px_rgba(8,145,178,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isSaving ? (
               <span className="flex items-center">

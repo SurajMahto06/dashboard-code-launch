@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { mockCourses, mockTopics, mockMentorshipQA, mockUsersDB } from "@/data/mock-dashboard";
+import { mockCourses, mockTopics, mockMentorshipQA, mockUsersDB, mockModules } from "@/data/mock-dashboard";
 import { PlayCircle, Award, Clock, Users, BookOpen, MessageSquare, Activity, ChevronDown, ChevronRight } from "lucide-react";
 import Link from "next/link";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default function DashboardOverview() {
   const { user } = useAuth();
@@ -12,12 +15,12 @@ export default function DashboardOverview() {
   if (!user) return null;
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 pb-12 w-full">
+    <div className="w-full space-y-8 pb-12 ">
       <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight text-white">
-          Welcome back, {user.name.split(' ')[0]}!
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white">
+          Welcome back, <span className="text-cyan-400">{user.name.split(' ')[0]}</span>!
         </h1>
-        <p className="text-zinc-400 mt-2">
+        <p className="text-sm text-zinc-400 mt-2">
           {user.role === "admin" ? "System overview and platform management." :
            user.role === "mentor" ? "Here is your mentorship activity overview." :
            "Ready to continue your elite learning journey?"}
@@ -42,10 +45,10 @@ function AdminDashboard() {
       </div>
 
       <div>
-        <h2 className="text-xl font-bold text-white mb-4">Platform Overview</h2>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 text-center text-zinc-500">
+        <h2 className="text-lg font-bold text-white mb-4">Platform Overview</h2>
+        <Card className="p-8 text-center text-zinc-500">
           Admin metrics and charts would be rendered here (e.g., using Recharts).
-        </div>
+        </Card>
       </div>
     </div>
   );
@@ -66,30 +69,30 @@ function MentorDashboard() {
 
       <div className="grid md:grid-cols-2 gap-8">
         <div>
-          <h2 className="text-xl font-bold text-white mb-4">Action Required: Pending Q&A</h2>
+          <h2 className="text-lg font-bold text-white mb-4">Action Required: Pending Q&A</h2>
           <div className="space-y-4">
             {pendingQA.length > 0 ? pendingQA.map(qa => (
-              <div key={qa.id} className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl">
+              <Card key={qa.id} className="p-4">
                 <div className="flex justify-between items-start mb-2">
                   <span className="font-medium text-white">{qa.studentName}</span>
                   <span className="text-xs text-zinc-500">{qa.date}</span>
                 </div>
                 <p className="text-zinc-400 text-sm mb-3 line-clamp-2">{qa.question}</p>
                 <Link href="/qa" className="text-cyan-400 text-sm font-medium hover:text-cyan-300">Reply Now &rarr;</Link>
-              </div>
+              </Card>
             )) : (
-              <div className="p-6 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-500 text-center">
+              <Card className="p-6 text-zinc-500 text-center">
                 All caught up! No pending questions.
-              </div>
+              </Card>
             )}
           </div>
         </div>
 
         <div>
-          <h2 className="text-xl font-bold text-white mb-4">Assigned Courses</h2>
+          <h2 className="text-lg font-bold text-white mb-4">Assigned Courses</h2>
           <div className="space-y-4">
             {assignedCourses.map(course => (
-              <div key={course.id} className="p-4 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center gap-4">
+              <Card key={course.id} className="p-4 flex items-center gap-4">
                 <div 
                   className="w-12 h-12 rounded-lg flex items-center justify-center bg-cover bg-center shrink-0 shadow-lg relative overflow-hidden"
                   style={{ backgroundImage: `url('${course.thumbnail}')` }}
@@ -98,10 +101,10 @@ function MentorDashboard() {
                   <BookOpen className="w-5 h-5 text-white relative z-10" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-white">{course.title}</h3>
+                  <h3 className="text-base font-semibold text-white">{course.title}</h3>
                   <p className="text-xs text-zinc-400">{course.totalTopics} Topics</p>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         </div>
@@ -119,7 +122,15 @@ function StudentDashboard() {
   
   // Find the first topic the user hasn't completed yet, or default to the first available module
   const firstUncompletedTopic = availableTopics.find(t => !user?.completedTopicIds?.includes(t.id));
-  const defaultOpenModule = firstUncompletedTopic ? firstUncompletedTopic.module : (availableTopics[0]?.module || "");
+  
+  let defaultOpenModule = "";
+  if (firstUncompletedTopic) {
+    const mod = mockModules.find(m => m.id === firstUncompletedTopic.moduleId);
+    if (mod) defaultOpenModule = mod.title;
+  } else if (availableTopics.length > 0) {
+    const mod = mockModules.find(m => m.id === availableTopics[0].moduleId);
+    if (mod) defaultOpenModule = mod.title;
+  }
 
   const [openModules, setOpenModules] = useState<string[]>(() => {
     if (typeof window !== "undefined") {
@@ -145,22 +156,24 @@ function StudentDashboard() {
   };
 
   const topicsByModule = availableTopics.reduce((acc, topic) => {
-    if (!acc[topic.module]) acc[topic.module] = [];
-    acc[topic.module].push(topic);
+    const moduleObj = mockModules.find(m => m.id === topic.moduleId);
+    const moduleName = moduleObj ? moduleObj.title : "Other Topics";
+    if (!acc[moduleName]) acc[moduleName] = [];
+    acc[moduleName].push(topic);
     return acc;
   }, {} as Record<string, typeof availableTopics>);
 
   return (
     <div className="space-y-8">
       <div className="grid gap-4 md:grid-cols-3">
-        <div className="p-6 bg-zinc-900 border border-zinc-800 rounded-xl col-span-full md:col-span-1">
+        <Card className="p-6 col-span-full md:col-span-1">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-cyan-950 text-cyan-400 rounded-lg">
+            <div className="p-3 bg-cyan-400 text-zinc-950 rounded-lg">
               <Award className="w-6 h-6" />
             </div>
             <div>
               <p className="text-sm text-zinc-400">Overall Progress</p>
-              <h2 className="text-2xl font-bold text-white">{user?.progressPercentage}%</h2>
+              <h2 className="text-lg font-bold text-white">{user?.progressPercentage}%</h2>
             </div>
           </div>
           <div className="mt-4 h-2 w-full bg-zinc-800 rounded-full overflow-hidden">
@@ -169,27 +182,27 @@ function StudentDashboard() {
               style={{ width: `${user?.progressPercentage}%` }}
             />
           </div>
-        </div>
+        </Card>
       </div>
 
       <div>
-        <h2 className="text-xl font-bold text-white mb-4">Course Modules</h2>
+        <h2 className="text-lg font-bold text-white mb-6">Course Modules</h2>
         <div className="space-y-4">
           {Object.entries(topicsByModule).map(([moduleName, topics]) => {
             const isOpen = openModules.includes(moduleName);
             
             return (
-              <div key={moduleName} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden transition-all shadow-xl">
+              <Card key={moduleName} className="overflow-hidden transition-all">
                 <button 
                   onClick={() => toggleModule(moduleName)}
                   className="w-full flex items-center justify-between p-6 bg-zinc-900 hover:bg-zinc-800/50 transition-colors"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="p-2.5 bg-cyan-950/50 border border-cyan-900/50 rounded-lg">
-                      <BookOpen className="w-5 h-5 text-cyan-400" />
+                    <div className="p-2.5 bg-cyan-400 text-zinc-950 shadow-md rounded-lg">
+                      <BookOpen className="w-5 h-5 text-zinc-950" />
                     </div>
                     <div className="text-left">
-                      <h3 className="text-lg font-bold text-white">{moduleName}</h3>
+                      <h3 className="text-base font-semibold text-white">{moduleName}</h3>
                       <p className="text-sm text-zinc-400">{topics.length} {topics.length === 1 ? 'Video' : 'Videos'}</p>
                     </div>
                   </div>
@@ -212,11 +225,11 @@ function StudentDashboard() {
                         >
                           <div>
                             <div className="flex items-center gap-2 mb-1.5">
-                              <span className="text-[10px] font-bold text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded uppercase tracking-wider">
+                              <Badge variant="secondary" className="text-[10px] uppercase tracking-wider">
                                 {course?.title}
-                              </span>
+                              </Badge>
                               {isCompleted && (
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-green-950 text-green-400 uppercase tracking-wider">Completed</span>
+                                <Badge variant="success" className="text-[10px] uppercase tracking-wider">Completed</Badge>
                               )}
                             </div>
                             <h4 className="text-md font-bold text-white group-hover:text-cyan-400 transition-colors">{topic.title}</h4>
@@ -227,21 +240,17 @@ function StudentDashboard() {
                               <Clock className="w-3 h-3 mr-1.5" />
                               {topic.video.duration}
                             </div>
-                            <button className={`flex items-center justify-center px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                              isCompleted 
-                                ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700" 
-                                : "bg-cyan-600 text-white hover:bg-cyan-500"
-                            }`}>
+                            <Button variant={isCompleted ? "secondary" : "primary"}>
                               <PlayCircle className="w-4 h-4 mr-2" />
                               {isCompleted ? "Review" : "Play"}
-                            </button>
+                            </Button>
                           </div>
                         </Link>
                       );
                     })}
                   </div>
                 )}
-              </div>
+              </Card>
             );
           })}
         </div>
@@ -252,14 +261,14 @@ function StudentDashboard() {
 
 function StatCard({ icon: Icon, label, value, color = "text-cyan-400", bg = "bg-cyan-950" }: any) {
   return (
-    <div className="p-6 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center gap-4">
+    <Card className="p-6 flex items-center gap-4 border-0 shadow-lg">
       <div className={`p-3 rounded-lg ${bg} ${color}`}>
         <Icon className="w-6 h-6" />
       </div>
       <div>
         <p className="text-sm text-zinc-400">{label}</p>
-        <h2 className="text-2xl font-bold text-white">{value}</h2>
+        <h2 className="text-lg font-bold text-white">{value}</h2>
       </div>
-    </div>
+    </Card>
   );
 }

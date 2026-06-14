@@ -20,14 +20,14 @@ export default function InterviewPage({ params }: { params: Promise<{ topicId: s
   };
 
   return (
-    <div className="max-w-4xl mx-auto pb-12">
+    <div className="w-full pb-12">
       <Link href={`/topic/${topic.id}`} className="inline-flex items-center text-sm text-zinc-400 hover:text-cyan-400 mb-6 transition-colors">
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to {topic.title}
       </Link>
 
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Interview Prep: {topic.title}</h1>
+        <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-6">Interview Prep: {topic.title}</h1>
         <p className="text-zinc-400">Practice answering these common interview questions related to the topic. Write down your answers or practice them out loud.</p>
       </div>
 
@@ -35,15 +35,15 @@ export default function InterviewPage({ params }: { params: Promise<{ topicId: s
         {questions?.length > 0 ? questions.map((q, index) => (
           <div key={q.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
             <div className="flex gap-4 mb-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-cyan-950 text-cyan-400 flex items-center justify-center font-bold">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-cyan-400 text-zinc-950 flex items-center justify-center font-bold">
                 {index + 1}
               </div>
-              <h3 className="text-lg font-medium text-white pt-1">{q.question}</h3>
+              <h3 className="text-base font-semibold text-white pt-1">{q.question}</h3>
             </div>
             
             <div className="pl-12">
               <textarea 
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-4 text-zinc-300 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all min-h-[120px] mb-4"
+                className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
                 placeholder="Type your practice answer here..."
               />
               
@@ -78,7 +78,7 @@ export default function InterviewPage({ params }: { params: Promise<{ topicId: s
       <div className="mt-8 flex justify-end">
         <Link 
           href="/"
-          className="px-6 py-3 rounded-lg font-medium bg-cyan-600 text-white hover:bg-cyan-500 transition-colors inline-flex items-center"
+          className="px-6 py-3 rounded-lg font-medium bg-cyan-400 text-zinc-950 font-bold hover:bg-cyan-500 transition-colors inline-flex items-center"
         >
           <UserCheck className="w-5 h-5 mr-2" />
           Complete Module

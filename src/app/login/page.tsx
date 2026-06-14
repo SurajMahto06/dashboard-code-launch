@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
-  
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +19,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
-    
+
     try {
       const user = await authService.login(email, password);
       login(user);
@@ -44,10 +44,10 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyan-950 text-cyan-400 mb-6 border border-cyan-800 shadow-[0_0_20px_rgba(34,211,238,0.2)]">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-cyan-400 text-zinc-950 mb-6 border border-cyan-800 shadow-[0_0_20px_rgba(34,211,238,0.2)]">
             <PlayCircle className="w-8 h-8" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Welcome Back</h1>
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-6">Welcome Back</h1>
           <p className="text-zinc-400">Sign in to your elite mentorship portal</p>
         </div>
 
@@ -61,7 +61,7 @@ export default function LoginPage() {
 
           <div className="space-y-5 mb-8">
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-2" htmlFor="email">
+              <label className="block text-sm font-medium text-zinc-300 mb-1.5" htmlFor="email">
                 Email Address
               </label>
               <div className="relative">
@@ -73,7 +73,7 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-zinc-700 rounded-xl bg-zinc-950 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-colors sm:text-sm"
+                  className="block w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
                   placeholder="you@example.com"
                   required
                 />
@@ -81,7 +81,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-300 mb-2" htmlFor="password">
+              <label className="block text-sm font-medium text-zinc-300 mb-1.5" htmlFor="password">
                 Password
               </label>
               <div className="relative">
@@ -93,7 +93,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-3 border border-zinc-700 rounded-xl bg-zinc-950 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 transition-colors sm:text-sm"
+                  className="block w-full pl-10 pr-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
                   placeholder="••••••••"
                   required
                 />
@@ -104,7 +104,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading || !email || !password}
-            className="w-full flex justify-center items-center py-3.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-cyan-600 hover:bg-cyan-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 focus:ring-offset-zinc-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="w-full flex justify-center items-center px-4 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-cyan-400 hover:bg-cyan-500 text-zinc-950 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-cyan-500 focus:ring-offset-zinc-950 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
           >
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
