@@ -55,8 +55,8 @@ export default function EditUserPage({ params }: { params: Promise<{ userId: str
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center">
         <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-xl md:text-2xl font-bold text-white mb-2">Access Denied</h1>
-        <p className="text-zinc-400">You must be an administrator to view this page.</p>
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">Access Denied</h1>
+        <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400">You must be an administrator to view this page.</p>
       </div>
     );
   }
@@ -111,32 +111,32 @@ export default function EditUserPage({ params }: { params: Promise<{ userId: str
 
   return (
     <div className="w-full pb-12 ">
-      <Link href="/users" className="inline-flex items-center text-sm font-medium text-zinc-400 hover:text-cyan-400 mb-6 transition-colors">
+      <Link href="/users" className="inline-flex items-center text-xs sm:text-[13px] lg:text-sm font-medium text-zinc-400 hover:text-cyan-400 mb-6 transition-colors">
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to Users
       </Link>
 
       <div className="mb-8">
-        <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-6 flex items-center">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-white mb-6 flex items-center">
           <UserCog className="w-8 h-8 mr-3 text-cyan-400" />
           Edit User Profile
         </h1>
-        <p className="text-zinc-400">Update account details, change roles, or reassign courses.</p>
+        <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400">Update account details, change roles, or reassign courses.</p>
       </div>
 
       <Card className="p-8 relative">
         {isSuccess && (
           <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center">
             <CheckCircle2 className="w-20 h-20 text-green-500 mb-4 animate-bounce" />
-            <h2 className="text-lg font-bold text-white">Profile Updated!</h2>
-            <p className="text-zinc-400 mt-2">Saving changes to system...</p>
+            <h2 className="text-base sm:text-lg lg:text-xl font-bold text-white">Profile Updated!</h2>
+            <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400 mt-2">Saving changes to system...</p>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">Full Name</label>
+              <label className="block text-xs sm:text-[13px] lg:text-sm font-medium text-zinc-300 mb-1.5">Full Name</label>
               <Input
                 required
                 type="text"
@@ -147,7 +147,7 @@ export default function EditUserPage({ params }: { params: Promise<{ userId: str
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">Email Address</label>
+              <label className="block text-xs sm:text-[13px] lg:text-sm font-medium text-zinc-300 mb-1.5">Email Address</label>
               <Input
                 required
                 type="email"
@@ -158,7 +158,7 @@ export default function EditUserPage({ params }: { params: Promise<{ userId: str
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">Password (Leave masked to keep unchanged)</label>
+              <label className="block text-xs sm:text-[13px] lg:text-sm font-medium text-zinc-300 mb-1.5">Password (Leave masked to keep unchanged)</label>
               <Input
                 required
                 type="password"
@@ -169,14 +169,14 @@ export default function EditUserPage({ params }: { params: Promise<{ userId: str
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">Account Role</label>
+              <label className="block text-xs sm:text-[13px] lg:text-sm font-medium text-zinc-300 mb-1.5">Account Role</label>
               <select
                 value={formData.role}
                 onChange={(e) => {
                   setFormData({ ...formData, role: e.target.value });
                   setAssignedCourses([]); // Clear courses on role change to prevent mismatched logic
                 }}
-                className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
+                className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs sm:text-[13px] lg:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
               >
                 <option value="student">Student</option>
                 <option value="mentor">Mentor</option>
@@ -185,11 +185,11 @@ export default function EditUserPage({ params }: { params: Promise<{ userId: str
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-zinc-300 mb-1.5">Account Status</label>
+              <label className="block text-xs sm:text-[13px] lg:text-sm font-medium text-zinc-300 mb-1.5">Account Status</label>
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
+                className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs sm:text-[13px] lg:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
               >
                 <option value="active">Active</option>
                 <option value="pending">Pending</option>
@@ -199,11 +199,11 @@ export default function EditUserPage({ params }: { params: Promise<{ userId: str
 
             {formData.role === "student" && (
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-zinc-300 mb-1.5">Subscription Plan</label>
+                <label className="block text-xs sm:text-[13px] lg:text-sm font-medium text-zinc-300 mb-1.5">Subscription Plan</label>
                 <select
                   value={formData.plan}
                   onChange={(e) => setFormData({ ...formData, plan: e.target.value })}
-                  className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
+                  className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs sm:text-[13px] lg:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
                 >
                   <option value="premium">Premium Plan</option>
                   <option value="elite">Elite Mentorship Plan</option>
@@ -213,19 +213,19 @@ export default function EditUserPage({ params }: { params: Promise<{ userId: str
           </div>
 
           {(formData.role === "student" || formData.role === "mentor") && (
-            <div className="border-t border-zinc-800 pt-8">
-              <h3 className="text-base font-semibold text-white mb-2">
+            <div className=" pt-8">
+              <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-white mb-2">
                 {formData.role === "student" ? "Enrolled Courses" : "Assigned Mentorship Courses"}
               </h3>
-              <p className="text-zinc-400 text-sm mb-4">Manage the courses this user has access to.</p>
+              <p className="text-zinc-400 text-xs sm:text-[13px] lg:text-sm mb-4">Manage the courses this user has access to.</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {mockCourses.map((course) => (
                   <label
                     key={course.id}
                     className={`flex items-start p-4 rounded-xl border-2 cursor-pointer transition-all ${assignedCourses.includes(course.id)
-                        ? "border-cyan-500 bg-cyan-950/20"
-                        : "border-zinc-800 bg-zinc-950 hover:border-zinc-700"
+                      ? "border-cyan-500 bg-cyan-950/20"
+                      : "border-zinc-800 bg-zinc-950 hover:border-zinc-700"
                       }`}
                   >
                     <div className="flex items-center h-5">
@@ -236,7 +236,7 @@ export default function EditUserPage({ params }: { params: Promise<{ userId: str
                         onChange={() => handleCourseToggle(course.id)}
                       />
                     </div>
-                    <div className="ml-3 text-sm">
+                    <div className="ml-3 text-xs sm:text-[13px] lg:text-sm">
                       <span className="font-medium text-white block">{course.title}</span>
                       <span className="text-zinc-500">{course.totalTopics} Topics</span>
                     </div>
@@ -246,7 +246,7 @@ export default function EditUserPage({ params }: { params: Promise<{ userId: str
             </div>
           )}
 
-          <div className="flex justify-end gap-4 border-t border-zinc-800 pt-6">
+          <div className="flex justify-end gap-4  pt-6">
             <Button
               type="button"
               variant="secondary"

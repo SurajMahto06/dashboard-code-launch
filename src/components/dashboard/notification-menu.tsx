@@ -114,11 +114,11 @@ export function NotificationMenu({ isOpen, onClose }: NotificationMenuProps) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 10, scale: 0.95 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="absolute top-[calc(100%+0.5rem)] right-0 w-[340px] sm:w-[400px] bg-zinc-950/80 backdrop-blur-2xl border border-white/10 shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-2xl overflow-hidden z-50 flex flex-col"
+          className="fixed left-4 right-4 top-[70px] sm:absolute sm:left-auto sm:-right-4 sm:top-[calc(100%+0.5rem)] sm:w-[400px] max-h-[85vh] sm:max-h-none bg-zinc-950 border border-zinc-800 shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-2xl overflow-hidden z-50 flex flex-col"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent">
-            <h3 className="text-base font-semibold text-white flex items-center tracking-tight">
+            <h3 className="text-sm font-semibold text-white flex items-center tracking-tight">
               Notifications
               {unreadCount > 0 && (
                 <motion.span 
@@ -157,7 +157,7 @@ export function NotificationMenu({ isOpen, onClose }: NotificationMenuProps) {
                 <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4 border border-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
                   <BellDot className="w-8 h-8 text-zinc-500" />
                 </div>
-                <p className="text-sm font-medium text-white mb-1">You're all caught up!</p>
+                <p className="text-[13px] font-medium text-white mb-1">You're all caught up!</p>
                 <p className="text-xs text-zinc-400">No new notifications right now.</p>
               </div>
             ) : (
@@ -172,7 +172,7 @@ export function NotificationMenu({ isOpen, onClose }: NotificationMenuProps) {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         key={notification.id} 
-                        className={`group p-5 flex gap-4 transition-all relative overflow-hidden ${
+                        className={`group p-5 flex gap-4 transition-colors duration-300 relative overflow-hidden ${
                           notification.isRead 
                             ? 'opacity-70 bg-transparent hover:bg-white/[0.02]' 
                             : 'bg-cyan-950/10 hover:bg-cyan-950/20'
@@ -182,31 +182,31 @@ export function NotificationMenu({ isOpen, onClose }: NotificationMenuProps) {
                           <div className="absolute left-0 top-0 bottom-0 w-1 bg-cyan-500 rounded-r-full shadow-[0_0_12px_rgba(6,182,212,0.8)]" />
                         )}
                         
-                        <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border border-white/5 shadow-sm ${style.bg} ${style.text}`}>
+                        <div className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center border border-white/5 shadow-sm transition-colors duration-300 ${style.bg} ${style.text}`}>
                           {style.icon}
                         </div>
                         
-                        <div className="flex-1 min-w-0 pt-0.5">
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <p className={`text-sm tracking-tight ${notification.isRead ? 'text-zinc-300 font-medium' : 'text-white font-semibold'}`}>
+                        <div className="flex-1 min-w-0 pt-0.5 relative">
+                          <div className="flex items-start justify-between gap-2 mb-1 pr-6">
+                            <p className={`text-xs sm:text-[13px] lg:text-sm tracking-tight font-medium transition-colors duration-300 ${notification.isRead ? 'text-zinc-400' : 'text-white'}`}>
                               {notification.title}
                             </p>
-                            <span className="text-[10px] text-zinc-500 font-medium whitespace-nowrap mt-0.5">
+                            <span className="text-[10px] sm:text-[11px] lg:text-xs text-zinc-500 font-medium whitespace-nowrap mt-0.5 transition-colors duration-300">
                               {formatTimeAgo(notification.date)}
                             </span>
                           </div>
                           
-                          <p className={`text-xs leading-relaxed line-clamp-2 ${notification.isRead ? 'text-zinc-500' : 'text-zinc-400'}`}>
+                          <p className={`text-[11px] sm:text-xs lg:text-[13px] leading-relaxed line-clamp-2 pr-6 transition-colors duration-300 ${notification.isRead ? 'text-zinc-500' : 'text-zinc-400'}`}>
                             {notification.message}
                           </p>
                           
                           {!notification.isRead && (
                             <button 
                               onClick={(e) => handleMarkAsRead(notification.id, e)}
-                              className="mt-3 text-[11px] font-semibold text-cyan-500 hover:text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity flex items-center"
+                              className="absolute top-0.5 right-0 text-cyan-500 hover:text-cyan-400 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center cursor-pointer bg-zinc-950/80 backdrop-blur-sm rounded-sm"
+                              title="Mark as read"
                             >
-                              <Check className="w-3 h-3 mr-1" />
-                              Mark as read
+                              <Check className="w-4 h-4" />
                             </button>
                           )}
                         </div>
@@ -224,7 +224,7 @@ export function NotificationMenu({ isOpen, onClose }: NotificationMenuProps) {
               <Link 
                 href="/notifications" 
                 onClick={onClose}
-                className="text-xs font-medium text-zinc-400 hover:text-white transition-colors"
+                className="text-[11px] sm:text-xs lg:text-[13px] font-medium text-zinc-400 hover:text-white transition-colors"
               >
                 View all notifications
               </Link>

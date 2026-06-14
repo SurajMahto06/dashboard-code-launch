@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { mockMentorshipQA, mockCourses, MentorshipQA, QAReply } from "@/data/mock-dashboard";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { MessageSquarePlus, Send, UserCircle2, ShieldCheck, CheckCircle2, BookOpen, ChevronDown, ImageIcon, X } from "lucide-react";
+import { MessageSquarePlus, Send, UserCircle2, ShieldCheck, CheckCircle2, BookOpen, ChevronDown, ImageIcon, X, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function QAPortal() {
@@ -105,16 +105,16 @@ export default function QAPortal() {
   return (
     <div className="w-full pb-12 ">
       <div className="mb-8">
-        <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-6">Mentorship Q&A</h1>
-        <p className="text-zinc-400">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-white mb-6">Mentorship Q&A</h1>
+        <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400">
           {user?.role === "student" ? "Ask questions and get direct answers from your elite mentors." : "Review and answer questions from your assigned mentees."}
         </p>
       </div>
 
       {user?.role === "student" && (
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 mb-10 shadow-xl">
-          <h2 className="text-lg font-bold text-white mb-4 flex items-center">
-            <MessageSquarePlus className="w-5 h-5 mr-2 text-cyan-400" />
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-6 mb-10 shadow-xl">
+          <h2 className="text-sm sm:text-base lg:text-lg font-bold text-white mb-4 flex items-center">
+            <MessageSquarePlus className="w-4 h-4 mr-2 text-cyan-400" />
             Ask a new question
           </h2>
           <form onSubmit={handleAskQuestion}>
@@ -138,10 +138,10 @@ export default function QAPortal() {
               value={newQuestion}
               onChange={(e) => setNewQuestion(e.target.value)}
               placeholder="Describe your doubt in detail. Mention the topic or code snippet if relevant..."
-              className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all custom-scrollbar"
+              className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs sm:text-[13px] lg:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all custom-scrollbar min-h-[120px] sm:min-h-[150px] leading-relaxed"
             />
-            <div className="flex justify-between items-center mt-3 pt-3">
-              <label className="cursor-pointer px-4 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 hover:text-cyan-400 hover:bg-cyan-400/30 transition-all flex items-center gap-2 text-sm font-medium" title="Attach screenshots">
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-3 pt-3 gap-3 sm:gap-0">
+              <label className="w-full sm:w-auto cursor-pointer px-4 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 hover:text-cyan-400 hover:bg-cyan-400/30 transition-all flex items-center justify-center sm:justify-start gap-2 text-xs sm:text-[13px] lg:text-sm font-medium" title="Attach screenshots">
                 <ImageIcon className="w-4 h-4" />
                 <span>Attach Images</span>
                 <input
@@ -155,7 +155,7 @@ export default function QAPortal() {
               <button
                 type="submit"
                 disabled={!newQuestion.trim() && newQuestionImages.length === 0}
-                className="px-6 py-2 text-sm font-semibold rounded-lg bg-cyan-400 text-zinc-950 font-bold hover:bg-cyan-500 transition-colors inline-flex items-center disabled:opacity-50 cursor-pointer"
+                className="w-full sm:w-auto px-6 py-2 text-xs sm:text-[13px] lg:text-sm font-semibold rounded-lg bg-cyan-400 text-zinc-950 hover:bg-cyan-500 transition-colors inline-flex justify-center items-center disabled:opacity-50 cursor-pointer"
               >
                 <Send className="w-4 h-4 mr-2" />
                 Submit Question
@@ -166,7 +166,7 @@ export default function QAPortal() {
       )}
 
       <div className="space-y-6">
-        <h2 className="text-lg font-bold text-white mb-4">Recent Discussions</h2>
+        <h2 className="text-base sm:text-lg lg:text-xl font-bold text-white mb-4">Recent Discussions</h2>
 
         {qaList.map((qa) => {
           const course = mockCourses.find(c => c.id === qa.courseId);
@@ -174,33 +174,31 @@ export default function QAPortal() {
           return (
             <div key={qa.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden transition-all duration-200">
               <div
-                className="p-6 cursor-pointer hover:bg-zinc-800/50 transition-colors"
+                className="p-4 sm:p-6 cursor-pointer hover:bg-zinc-800/50 transition-colors"
                 onClick={() => toggleAccordion(qa.id)}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-start gap-4 flex-1">
                     <div className="flex-shrink-0">
-                      <UserCircle2 className="w-10 h-10 text-zinc-500" />
+                      <UserCircle2 className="w-8 h-8 sm:w-10 sm:h-10 text-zinc-500" />
                     </div>
                     <div className="flex-1">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 sm:mb-1 gap-2 sm:gap-0">
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                          <span className="font-semibold text-white">{qa.studentName}</span>
-                          {course && (
-                            <span className="flex items-center text-[10px] font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-400 bg-cyan-400/15 px-2 py-0.5 rounded whitespace-nowrap">
-                              <BookOpen className="w-3 h-3 mr-1 shrink-0 text-cyan-700 dark:text-cyan-400" />
-                              <span className="truncate max-w-[150px] sm:max-w-none">{course.title}</span>
-                            </span>
-                          )}
-                          {!expandedIds[qa.id] && qa.replies.length > 0 && (
-                            <span className="text-[10px] font-bold text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded">
-                              {qa.replies.length} {qa.replies.length === 1 ? 'Reply' : 'Replies'}
-                            </span>
-                          )}
-                        </div>
-                        <span className="text-xs text-zinc-500 shrink-0">{qa.date}</span>
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 sm:mb-1">
+                        <span className="text-sm sm:text-base lg:text-lg font-semibold text-white">{qa.studentName}</span>
+                        {course && (
+                          <span className="flex items-center text-[10px] sm:text-[11px] lg:text-xs font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-400 bg-cyan-400/15 px-2 py-0.5 rounded whitespace-nowrap">
+                            <BookOpen className="w-3 h-3 mr-1 shrink-0 text-cyan-700 dark:text-cyan-400" />
+                            <span className="truncate max-w-[150px] sm:max-w-none">{course.title}</span>
+                          </span>
+                        )}
+                        <span className="text-[10px] sm:text-[11px] lg:text-xs text-zinc-500">• {qa.date}</span>
+                        {!expandedIds[qa.id] && qa.replies.length > 0 && (
+                          <span className="text-[10px] sm:text-[11px] lg:text-xs font-bold text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded">
+                            {qa.replies.length} {qa.replies.length === 1 ? 'Reply' : 'Replies'}
+                          </span>
+                        )}
                       </div>
-                      <p className={`text-zinc-300 ${!expandedIds[qa.id] ? 'line-clamp-2' : ''}`}>{qa.question}</p>
+                      <p className={`text-xs sm:text-[13px] lg:text-sm leading-relaxed text-zinc-300 ${!expandedIds[qa.id] ? 'line-clamp-2' : ''}`}>{qa.question}</p>
                       {qa.imageUrls && qa.imageUrls.length > 0 && (
                         <div className={`mt-3 flex flex-wrap gap-2 ${!expandedIds[qa.id] ? 'hidden' : ''}`}>
                           {qa.imageUrls.map((img, idx) => (
@@ -235,25 +233,20 @@ export default function QAPortal() {
                     {(qa.replies || []).map((reply, index) => {
                       const isMentor = reply.authorRole === 'mentor' || reply.authorRole === 'admin';
                       return (
-                        <div key={reply.id} className="bg-zinc-950 border-t border-zinc-800 p-4 sm:p-6 pl-12 sm:pl-20 relative">
-                          {/* Connecting Line (except for the last item if it's the only one) */}
-                          <div className="absolute left-5 sm:left-8 top-0 bottom-0 w-px bg-zinc-800" />
-
-                          <div className="flex items-start gap-3 sm:gap-4 relative">
-                            <div className={`flex-shrink-0 absolute -left-9 sm:-left-16 bg-zinc-950 p-1 rounded-full ${isMentor ? 'text-cyan-500' : 'text-zinc-500'}`}>
+                        <div key={reply.id} className="bg-zinc-950  p-4 sm:p-6">
+                          <div className="flex items-start gap-3 sm:gap-4">
+                            <div className={`flex-shrink-0 ${isMentor ? 'text-cyan-500' : 'text-zinc-500'}`}>
                               {isMentor ? <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8" /> : <UserCircle2 className="w-6 h-6 sm:w-8 sm:h-8" />}
                             </div>
                             <div className="flex-1">
-                              <div className="flex items-center justify-between mb-1">
-                                <div className="flex items-center">
-                                  <span className={`font-semibold mr-2 ${isMentor ? 'text-cyan-400' : 'text-zinc-300'}`}>
-                                    {reply.authorName}
-                                  </span>
-                                  {isMentor && <CheckCircle2 className="w-4 h-4 text-cyan-500 mr-2" />}
-                                </div>
-                                <span className="text-xs text-zinc-500 shrink-0">{reply.date}</span>
+                              <div className="flex items-center flex-wrap gap-2 mb-2 sm:mb-1">
+                                <span className={`text-xs sm:text-[13px] lg:text-sm font-semibold ${isMentor ? 'text-cyan-400' : 'text-zinc-300'}`}>
+                                  {reply.authorName}
+                                </span>
+                                {isMentor && <CheckCircle2 className="w-4 h-4 text-cyan-500" />}
+                                <span className="text-[10px] sm:text-[11px] lg:text-xs text-zinc-500">• {reply.date}</span>
                               </div>
-                              <p className="text-zinc-400 whitespace-pre-wrap">{reply.content}</p>
+                              <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400 whitespace-pre-wrap leading-relaxed">{reply.content}</p>
                               {reply.imageUrls && reply.imageUrls.length > 0 && (
                                 <div className="mt-3 flex flex-wrap gap-2">
                                   {reply.imageUrls.map((img, idx) => (
@@ -274,14 +267,11 @@ export default function QAPortal() {
                     })}
 
                     {/* Reply Input Box (Available to both Mentor and Student) */}
-                    <div className={`bg-zinc-950 p-4 sm:p-6 ${(qa.replies && qa.replies.length > 0) ? 'pt-0 pl-12 sm:pl-20 relative' : 'border-t border-zinc-800'}`}>
-                      {(qa.replies && qa.replies.length > 0) && <div className="absolute left-5 sm:left-8 top-0 bottom-0 w-px bg-zinc-800" />}
-                      <div className={`flex items-start gap-3 sm:gap-4 ${(qa.replies && qa.replies.length > 0) ? 'relative' : ''}`}>
-                        {!(qa.replies && qa.replies.length > 0) && (
-                          <div className="flex-shrink-0">
-                            {user?.role === 'mentor' ? <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8 text-zinc-500" /> : <UserCircle2 className="w-6 h-6 sm:w-8 sm:h-8 text-zinc-500" />}
-                          </div>
-                        )}
+                    <div className="bg-zinc-950 p-4 sm:p-6 ">
+                      <div className="flex items-start gap-3 sm:gap-4">
+                        <div className="flex-shrink-0">
+                          {user?.role === 'mentor' ? <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8 text-zinc-500 mt-1" /> : <UserCircle2 className="w-6 h-6 sm:w-8 sm:h-8 text-zinc-500 mt-1" />}
+                        </div>
                         <div className="flex-1">
                           {replyImages[qa.id] && replyImages[qa.id].length > 0 && (
                             <div className="mb-3 flex flex-wrap gap-3">
@@ -303,17 +293,18 @@ export default function QAPortal() {
                             value={replyText[qa.id] || ""}
                             onChange={(e) => setReplyText({ ...replyText, [qa.id]: e.target.value })}
                             placeholder={(qa.replies && qa.replies.length > 0) ? "Write a reply..." : (user?.role === 'mentor' ? "Type your reply to the student here..." : "Add more context to your question...")}
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-3 text-zinc-300 focus:outline-none focus:border-cyan-500 transition-all min-h-[80px] mb-3 text-sm custom-scrollbar"
+                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-3 sm:p-4 text-xs sm:text-[13px] lg:text-sm text-zinc-300 focus:outline-none focus:border-cyan-500 transition-all min-h-[120px] sm:min-h-[150px] mb-3 leading-relaxed custom-scrollbar"
                           />
-                          <div className="flex justify-between items-center">
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center w-full gap-4 mt-2">
                             {user?.role === "student" && !(qa.replies && qa.replies.length > 0) ? (
-                              <p className="text-xs text-zinc-500 italic flex items-center">
-                                Waiting for mentor reply...
-                              </p>
-                            ) : <div></div>}
+                              <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 text-amber-500 rounded-md border border-amber-500/20 text-[10px] sm:text-[11px] lg:text-xs font-medium shrink-0">
+                                <Clock className="w-3.5 h-3.5 animate-pulse shrink-0" />
+                                <span className="whitespace-nowrap">Waiting for mentor reply...</span>
+                              </div>
+                            ) : <div className="hidden sm:block"></div>}
 
-                            <div className="flex justify-between items-center w-full mt-2">
-                              <label className="cursor-pointer px-4 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 hover:text-cyan-400 hover:bg-cyan-400/30 transition-all flex items-center gap-2 text-sm font-medium" title="Attach screenshots">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+                              <label className="w-full sm:w-auto cursor-pointer px-4 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 hover:text-cyan-400 hover:bg-cyan-400/30 transition-all flex items-center justify-center sm:justify-start gap-2 text-xs sm:text-[13px] lg:text-sm font-medium" title="Attach screenshots">
                                 <ImageIcon className="w-4 h-4" />
                                 <span>Attach Images</span>
                                 <input
@@ -327,7 +318,7 @@ export default function QAPortal() {
                               <button
                                 onClick={() => handleReply(qa.id)}
                                 disabled={(!replyText[qa.id]?.trim() && (!replyImages[qa.id] || replyImages[qa.id].length === 0))}
-                                className="px-6 py-2 text-sm font-semibold rounded-lg bg-cyan-400 text-zinc-950 font-bold hover:bg-cyan-500 transition-colors disabled:opacity-50"
+                                className="w-full sm:w-auto px-6 py-2 text-xs sm:text-[13px] lg:text-sm font-semibold rounded-lg bg-cyan-400 text-zinc-950 hover:bg-cyan-500 transition-colors disabled:opacity-50 inline-flex justify-center items-center"
                               >
                                 Post Reply
                               </button>

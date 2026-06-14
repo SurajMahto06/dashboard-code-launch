@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
-  BookOpen, 
-  Video, 
-  MessageCircleQuestion, 
-  Settings, 
+import {
+  BookOpen,
+  Video,
+  MessageCircleQuestion,
+  Settings,
   LogOut,
   LayoutDashboard,
   Users,
@@ -25,7 +25,7 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setI
 
   // Define navigation based on roles
   const getNavItems = () => {
-    switch(user.role) {
+    switch (user.role) {
       case "admin":
         return [
           { name: "System Overview", href: "/", icon: LayoutDashboard },
@@ -57,49 +57,47 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setI
   return (
     <>
       {isOpen && (
-        <div 
-          className="fixed inset-0 bg-zinc-50/50 dark:bg-black/80 z-40 lg:hidden" 
+        <div
+          className="fixed inset-0 bg-zinc-50/50 dark:bg-black/80 z-40 lg:hidden"
           onClick={() => setIsOpen?.(false)}
         />
       )}
       <div className={`fixed lg:static inset-y-0 left-0 z-50 flex h-screen w-64 flex-col bg-zinc-950 border-r border-zinc-800 text-zinc-300 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex h-16 items-center justify-between px-6 border-b border-zinc-800">
+        <div className="flex h-16 items-center justify-between px-6 ">
           <div className="flex items-center">
             <Video className="h-6 w-6 text-cyan-400 mr-2" />
-            <span className="text-lg font-bold text-white">Elite Portal</span>
+            <span className="text-base sm:text-lg font-bold text-white">Elite Portal</span>
           </div>
           <button onClick={() => setIsOpen?.(false)} className="lg:hidden text-zinc-400 hover:text-white">
             <X className="h-6 w-6" />
           </button>
         </div>
 
-      <div className="flex-1 overflow-y-auto py-4">
-        <nav className="space-y-1 px-3">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                onClick={() => setIsOpen?.(false)}
-                className={`group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                  isActive
-                    ? "bg-cyan-400 text-zinc-950 font-bold"
-                    : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
-                }`}
-              >
-                <item.icon
-                  className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                    isActive ? "text-zinc-950" : "text-zinc-500 group-hover:text-zinc-300"
-                  }`}
-                  aria-hidden="true"
-                />
-                {item.name}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+        <div className="flex-1 overflow-y-auto py-4">
+          <nav className="space-y-1 px-3">
+            {navigation.map((item) => {
+              const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  onClick={() => setIsOpen?.(false)}
+                  className={`group flex items-center px-3 py-2 text-xs sm:text-[13px] lg:text-sm font-medium rounded-md transition-colors ${isActive
+                      ? "bg-cyan-400 text-zinc-950 font-bold"
+                      : "text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100"
+                    }`}
+                >
+                  <item.icon
+                    className={`mr-3 h-5 w-5 flex-shrink-0 ${isActive ? "text-zinc-950" : "text-zinc-500 group-hover:text-zinc-300"
+                      }`}
+                    aria-hidden="true"
+                  />
+                  {item.name}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
 
       </div>
     </>

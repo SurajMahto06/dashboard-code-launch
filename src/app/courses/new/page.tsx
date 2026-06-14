@@ -10,7 +10,7 @@ import { mockCourses } from "@/data/mock-dashboard";
 export default function NewCoursePage() {
   const router = useRouter();
   const { user } = useAuth();
-  
+
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -21,7 +21,7 @@ export default function NewCoursePage() {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] text-center">
         <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-xl md:text-2xl font-bold text-white mb-2">Access Denied</h1>
+        <h1 className="text-lg md:text-2xl font-bold text-white mb-2">Access Denied</h1>
         <p className="text-zinc-400">You must be an administrator to create courses.</p>
       </div>
     );
@@ -54,7 +54,7 @@ export default function NewCoursePage() {
 
       // In a real app we'd push to backend. For the mock we just mutate the array directly for the demo
       mockCourses.push(newCourse);
-      
+
       // Redirect to the edit page for this new course
       router.push(`/courses/${newCourse.id}/edit`);
     }, 800);
@@ -62,41 +62,41 @@ export default function NewCoursePage() {
 
   return (
     <div className="w-full pb-12 ">
-      <Link href="/courses" className="inline-flex items-center text-sm text-zinc-400 hover:text-cyan-400 mb-6 transition-colors">
+      <Link href="/courses" className="inline-flex items-center text-[13px] text-zinc-400 hover:text-cyan-400 mb-6 transition-colors">
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to Course Builder
       </Link>
 
       <div className="mb-8">
-        <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white mb-6">
+        <h1 className="text-lg md:text-2xl font-bold tracking-tight text-white mb-6">
           Create New Course
         </h1>
         <p className="text-zinc-400">Define the core details of your new elite learning program.</p>
       </div>
 
       <form onSubmit={handleCreateCourse} className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 shadow-xl space-y-8">
-        
+
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1.5">Course Title</label>
-          <input 
-            value={title} 
-            onChange={e => setTitle(e.target.value)} 
-            type="text" 
-            placeholder="e.g. Advanced System Design" 
+          <label className="block text-[13px] font-medium text-zinc-300 mb-1.5">Course Title</label>
+          <input
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            type="text"
+            placeholder="e.g. Advanced System Design"
             required
-            className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all" 
+            className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-[13px] text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1.5">Description</label>
-          <textarea 
-            value={description} 
-            onChange={e => setDescription(e.target.value)} 
-            rows={4} 
+          <label className="block text-[13px] font-medium text-zinc-300 mb-1.5">Description</label>
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            rows={4}
             required
-            placeholder="What will students learn in this course? Provide a compelling overview." 
-            className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all" 
+            placeholder="What will students learn in this course? Provide a compelling overview."
+            className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-[13px] text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
           />
         </div>
 
@@ -105,37 +105,37 @@ export default function NewCoursePage() {
             <ImageIcon className="w-4 h-4 mr-2" />
             Course Thumbnail (Image Upload)
           </label>
-          <div className="border-2 border-dashed border-zinc-700 hover:border-cyan-500 bg-zinc-950 rounded-xl p-6 text-center transition-colors relative group overflow-hidden">
-            <input 
-              type="file" 
-              accept="image/jpeg,image/png,image/webp" 
+          <div className="border-2 border-dashed border-zinc-700 hover:border-cyan-500 bg-zinc-950 rounded-xl p-4 sm:p-6 text-center transition-colors relative group overflow-hidden">
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
               onChange={handleImageUpload}
               required
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             />
-            
+
             {previewUrl ? (
               <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${previewUrl}')` }}>
                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center">
-                   <UploadCloud className="w-8 h-8 text-white mb-2" />
-                   <p className="text-white font-medium text-sm">Click to change image</p>
+                  <UploadCloud className="w-8 h-8 text-white mb-2" />
+                  <p className="text-white font-medium text-[13px]">Click to change image</p>
                 </div>
               </div>
             ) : (
               <div className="flex flex-col items-center py-6">
                 <UploadCloud className="w-12 h-12 text-zinc-500 group-hover:text-cyan-400 transition-colors mb-3" />
                 <p className="text-zinc-300 font-medium mb-1">Click or drag image to upload</p>
-                <p className="text-zinc-500 text-sm">JPG, PNG, WebP up to 5MB</p>
+                <p className="text-zinc-500 text-[13px]">JPG, PNG, WebP up to 5MB</p>
               </div>
             )}
           </div>
         </div>
 
-        <div className="pt-6 border-t border-zinc-800 flex justify-end">
-          <button 
-            type="submit" 
+        <div className="pt-6 flex justify-end">
+          <button
+            type="submit"
             disabled={isSaving || !title || !description}
-            className="flex items-center px-4 py-2 text-sm bg-cyan-400 hover:bg-cyan-500 text-zinc-950 font-bold font-medium rounded-lg transition-colors shadow-[0_0_20px_rgba(8,145,178,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="flex items-center px-4 py-2 text-[13px] bg-cyan-400 hover:bg-cyan-500 text-zinc-950 font-bold font-medium rounded-lg transition-colors shadow-[0_0_20px_rgba(8,145,178,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isSaving ? (
               <span className="flex items-center">
@@ -144,7 +144,7 @@ export default function NewCoursePage() {
               </span>
             ) : (
               <span className="flex items-center">
-                <Save className="w-5 h-5 mr-2" />
+                <Save className="w-4 h-4 mr-2" />
                 Create Course
               </span>
             )}
