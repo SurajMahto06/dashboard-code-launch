@@ -33,9 +33,7 @@ export default function ProfilePage() {
         <div className="lg:col-span-1 space-y-8">
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl overflow-hidden shadow-xl">
             <div className="p-8 text-center  relative bg-gradient-to-b from-cyan-950/20 to-transparent">
-              <button className="absolute top-4 right-4 p-2 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors cursor-pointer">
-                <Edit2 className="w-4 h-4" />
-              </button>
+
 
               <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-cyan-950 border-4 border-cyan-900/50 text-cyan-400 text-3xl font-bold mb-4 shadow-[0_0_20px_rgba(34,211,238,0.15)]">
                 {user.avatarUrl ? (
