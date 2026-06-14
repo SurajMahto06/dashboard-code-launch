@@ -2,10 +2,19 @@
 
 import { useAuth } from "@/components/dashboard/auth-provider";
 import { mockUsersDB, mockCourses } from "@/data/mock-dashboard";
-import { Users, ShieldAlert, MessageCircle, MoreVertical } from "lucide-react";
+import { Users, ShieldAlert, MessageCircle, MoreVertical, FileText, Mail } from "lucide-react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 
 export default function MenteesPage() {
   const { user } = useAuth();
+  const [activeDropdownId, setActiveDropdownId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleClose = () => setActiveDropdownId(null);
+    window.addEventListener("click", handleClose);
+    return () => window.removeEventListener("click", handleClose);
+  }, []);
 
   if (user?.role !== "mentor") {
     return (
@@ -31,7 +40,7 @@ export default function MenteesPage() {
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {mentees.length > 0 ? mentees.map(mentee => (
-          <div key={mentee.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-6">
+          <div key={mentee.id} className="bg-zinc-900 border border-zinc-800 rounded-xl p-4 sm:p-6 relative">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-cyan-950 flex items-center justify-center text-cyan-400 font-bold text-xs sm:text-[13px] lg:text-sm">
@@ -42,9 +51,39 @@ export default function MenteesPage() {
                   <p className="text-[10px] sm:text-[11px] lg:text-xs text-zinc-500">{mentee.email}</p>
                 </div>
               </div>
-              <button className="text-zinc-500 hover:text-white transition-colors cursor-pointer">
-                <MoreVertical className="w-5 h-5" />
-              </button>
+              <div className="relative">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setActiveDropdownId(activeDropdownId === mentee.id ? null : mentee.id);
+                  }}
+                  className="text-zinc-500 hover:text-white p-1.5 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                >
+                  <MoreVertical className="w-5 h-5" />
+                </button>
+
+                {activeDropdownId === mentee.id && (
+                  <div className="absolute right-0 mt-2 w-48 bg-zinc-950 border border-zinc-800 rounded-xl shadow-xl z-50 py-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <Link
+                      href={`/assignments?student=${mentee.id}&course=${mentee.enrolledCourseIds?.[0] || ""}&action=assign`}
+                      className="flex items-center gap-2 px-4 py-2 text-xs sm:text-[13px] text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
+                      onClick={() => setActiveDropdownId(null)}
+                    >
+                      <FileText className="w-4 h-4 text-zinc-500" />
+                      Assign Task
+                    </Link>
+
+                    <a
+                      href={`mailto:${mentee.email}`}
+                      className="flex items-center gap-2 px-4 py-2 text-xs sm:text-[13px] text-zinc-300 hover:text-white hover:bg-zinc-800 transition-colors"
+                      onClick={() => setActiveDropdownId(null)}
+                    >
+                      <Mail className="w-4 h-4 text-zinc-500" />
+                      Send Email
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="mb-4 space-y-2">
@@ -67,9 +106,13 @@ export default function MenteesPage() {
                   {mentee.enrolledCourseIds?.map(id => mockCourses.find(c => c.id === id)?.title).join(', ') || "None"}
                 </span>
               </div>
-              <button className="p-2 bg-zinc-800 hover:bg-cyan-600 text-white rounded-lg transition-colors cursor-pointer" title="Message Mentee">
+              <Link
+                href={`/qa?student=${encodeURIComponent(mentee.name)}`}
+                className="p-2 bg-zinc-800 hover:bg-cyan-600 text-white rounded-lg transition-colors cursor-pointer"
+                title="Message Mentee"
+              >
                 <MessageCircle className="w-4 h-4" />
-              </button>
+              </Link>
             </div>
           </div>
         )) : (

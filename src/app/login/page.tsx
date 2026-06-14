@@ -42,8 +42,11 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] px-4 pt-8 pb-16 sm:pt-12 sm:pb-24">
-      <div className="w-full max-w-[420px]">
-        <div className="text-center mb-8 sm:mb-10">
+      <div className="w-full max-w-[420px] relative">
+        {/* Subtle background glow outside the card */}
+        <div className="absolute -top-12 -right-12 w-64 h-64 bg-cyan-500/10 blur-3xl rounded-full pointer-events-none z-0"></div>
+
+        <div className="text-center mb-8 sm:mb-10 relative z-10">
           <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-500 text-zinc-950 mb-6 shadow-lg shadow-cyan-500/20">
             <PlayCircle className="w-7 h-7 sm:w-8 sm:h-8" />
           </div>
@@ -51,9 +54,7 @@ export default function LoginPage() {
           <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400">Sign in to your elite mentorship portal</p>
         </div>
 
-        <form onSubmit={handleLogin} className="relative bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 rounded-[2rem] p-6 sm:p-8 shadow-2xl overflow-hidden">
-          {/* Subtle background glow */}
-          <div className="absolute -top-32 -right-32 w-64 h-64 bg-cyan-500/10 blur-3xl rounded-full pointer-events-none"></div>
+        <form onSubmit={handleLogin} className="relative z-10 bg-zinc-900/60 backdrop-blur-xl border border-zinc-800/80 rounded-[2rem] p-6 sm:p-8 shadow-2xl">
 
           {error && (
             <div className="mb-6 p-4 rounded-xl bg-red-950/50 border border-red-900/50 flex items-start relative z-10">

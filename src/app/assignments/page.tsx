@@ -32,6 +32,16 @@ export default function AssignmentsPage() {
     if (!saved) {
       localStorage.setItem("mockAssignmentsDB", JSON.stringify(mockAssignmentsDB));
     }
+
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const student = params.get('student');
+      const course = params.get('course');
+      const action = params.get('action');
+      if (student) setSelectedStudentId(student);
+      if (course) setSelectedCourseId(course);
+      if (action === 'assign' || student) setActiveTab('assign');
+    }
   }, [user]);
 
   if (!user) return null;

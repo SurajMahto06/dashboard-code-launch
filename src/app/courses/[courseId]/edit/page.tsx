@@ -166,11 +166,11 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
             <h2 className="text-base font-bold text-white mb-6 -800 pb-2">1. Topic Details</h2>
             <div className="grid gap-6">
               <div>
-                <label className="block text-[13px] font-medium text-zinc-300 mb-1.5">Topic Title</label>
+                <label className="block text-sm sm:text-[15px] font-medium text-zinc-300 mb-2">Topic Title</label>
                 <Input value={title} onChange={e => setTitle(e.target.value)} type="text" placeholder="e.g. Intro to Next.js" />
               </div>
               <div>
-                <label className="block text-[13px] font-medium text-zinc-300 mb-1.5">Description</label>
+                <label className="block text-sm sm:text-[15px] font-medium text-zinc-300 mb-2">Description</label>
                 <Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="What will students learn in this topic?" />
               </div>
             </div>
@@ -192,14 +192,14 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
               {videoFile ? (
                 <div className="flex flex-col items-center">
                   <CheckCircle2 className="w-12 h-12 text-green-500 mb-3" />
-                  <p className="text-white font-medium">{videoFile.name}</p>
-                  <p className="text-zinc-500 text-[13px] mt-1">Ready for upload</p>
+                  <p className="text-white font-medium text-xs sm:text-[13px]">{videoFile.name}</p>
+                  <p className="text-zinc-500 text-[11px] sm:text-xs mt-1">Ready for upload</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center">
                   <UploadCloud className="w-12 h-12 text-zinc-500 group-hover:text-cyan-400 transition-colors mb-3" />
-                  <p className="text-zinc-300 font-medium mb-1">Click or drag video to upload</p>
-                  <p className="text-zinc-500 text-[13px]">MP4, WebM up to 2GB</p>
+                  <p className="text-zinc-300 font-medium text-xs sm:text-[13px] mb-1">Click or drag video to upload</p>
+                  <p className="text-zinc-500 text-[11px] sm:text-xs">MP4, WebM up to 2GB</p>
                 </div>
               )}
             </div>
@@ -370,7 +370,7 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
         Back to Course Overview
       </Link>
 
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-lg md:text-2xl font-bold tracking-tight text-white mb-2 flex items-center">
             {course.title}
@@ -379,7 +379,7 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
         </div>
         <button
           onClick={() => setIsAddingModule(true)}
-          className="flex items-center px-4 py-2.5 bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-white font-medium rounded-lg transition-colors"
+          className="flex items-center justify-center px-4 py-2.5 bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-white font-medium rounded-lg transition-colors w-full sm:w-auto"
         >
           <FolderPlus className="w-5 h-5 mr-2 text-cyan-400" />
           Add New Module
@@ -389,7 +389,7 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
       {isAddingModule && (
         <div className="bg-zinc-900 border border-cyan-900/50 rounded-xl p-4 sm:p-6 mb-8 shadow-lg">
           <h3 className="text-sm font-semibold text-white mb-4">Create New Module</h3>
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <Input
               autoFocus
               value={newModuleTitle}
@@ -398,8 +398,10 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
               placeholder="e.g. Module 3: State Management"
               className="flex-1"
             />
-            <button onClick={() => setIsAddingModule(false)} className="px-4 py-2 text-zinc-400 hover:text-white transition-colors">Cancel</button>
-            <button onClick={handleSaveModule} className="px-6 py-2 bg-cyan-400 hover:bg-cyan-500 text-zinc-950 font-bold font-medium rounded-lg transition-colors cursor-pointer">Save</button>
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setIsAddingModule(false)} className="px-4 py-2 bg-zinc-800 border border-zinc-700 hover:bg-zinc-700 text-white font-medium rounded-lg transition-colors text-xs sm:text-[13px] cursor-pointer">Cancel</button>
+              <button onClick={handleSaveModule} className="px-6 py-2 bg-cyan-400 hover:bg-cyan-500 text-zinc-950 font-bold font-medium rounded-lg transition-colors cursor-pointer text-xs sm:text-[13px]">Save</button>
+            </div>
           </div>
         </div>
       )}
@@ -471,9 +473,9 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
             <p className="text-zinc-500 mb-6">Start by creating your first module to organize your course content.</p>
             <button
               onClick={() => setIsAddingModule(true)}
-              className="inline-flex items-center px-4 py-2 bg-cyan-400 hover:bg-cyan-500 text-zinc-950 font-bold font-medium rounded-lg transition-colors"
+              className="inline-flex items-center px-3 py-1.5 bg-cyan-400 hover:bg-cyan-500 text-zinc-950 font-bold text-xs sm:text-[13px] rounded-lg transition-colors cursor-pointer"
             >
-              <Plus className="w-5 h-5 mr-2" />
+              <Plus className="w-4 h-4 mr-1.5" />
               Create First Module
             </button>
           </div>

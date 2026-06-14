@@ -12,6 +12,17 @@ export default function QAPortal() {
   const [qaList, setQaList] = useState<MentorshipQA[]>(mockMentorshipQA);
   const [newQuestion, setNewQuestion] = useState("");
   const [newQuestionImages, setNewQuestionImages] = useState<string[]>([]);
+  const [filterStudent, setFilterStudent] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const student = params.get('student');
+      if (student) {
+        setFilterStudent(student);
+      }
+    }
+  }, []);
 
   const [replyText, setReplyText] = useState<Record<string, string>>({});
   const [replyImages, setReplyImages] = useState<Record<string, string[]>>({});
@@ -24,6 +35,19 @@ export default function QAPortal() {
     });
     return initial;
   });
+
+  useEffect(() => {
+    if (filterStudent) {
+      const matched = qaList.filter(q => q.studentName.toLowerCase().includes(filterStudent.toLowerCase()));
+      if (matched.length > 0) {
+        const expanded: Record<string, boolean> = {};
+        matched.forEach(q => {
+          expanded[q.id] = true;
+        });
+        setExpandedIds(expanded);
+      }
+    }
+  }, [filterStudent, qaList]);
 
   const toggleAccordion = (id: string) => {
     setExpandedIds(prev => ({ ...prev, [id]: !prev[id] }));
@@ -102,6 +126,16 @@ export default function QAPortal() {
     setReplyImages(prev => ({ ...prev, [qaId]: [] }));
   };
 
+  const roleFilteredQaList = qaList.filter(q => {
+    if (user?.role === "student") {
+      return q.studentName.toLowerCase() === user.name.toLowerCase();
+    }
+    if (user?.role === "mentor") {
+      return user.assignedCourseIds?.includes(q.courseId);
+    }
+    return true; // Admin sees all
+  });
+
   return (
     <div className="w-full pb-12 ">
       <div className="mb-8">
@@ -166,9 +200,29 @@ export default function QAPortal() {
       )}
 
       <div className="space-y-6">
-        <h2 className="text-base sm:text-lg lg:text-xl font-bold text-white mb-4">Recent Discussions</h2>
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <h2 className="text-base sm:text-lg lg:text-xl font-bold text-white">Recent Discussions</h2>
+          {filterStudent && (
+            <div className="flex items-center gap-2 px-3 py-1 bg-cyan-950/50 border border-cyan-800/30 text-cyan-400 rounded-full text-xs sm:text-[13px] font-medium shrink-0 animate-in fade-in zoom-in-95">
+              <span>Mentee: <span className="font-semibold text-white">{filterStudent}</span></span>
+              <button 
+                onClick={() => {
+                  setFilterStudent(null);
+                  if (typeof window !== "undefined") {
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('student');
+                    window.history.replaceState({}, '', url.toString());
+                  }
+                }}
+                className="hover:text-white transition-colors cursor-pointer ml-1 p-0.5 rounded-full hover:bg-cyan-900 flex items-center justify-center"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+        </div>
 
-        {qaList.map((qa) => {
+        {roleFilteredQaList.filter(q => !filterStudent || q.studentName.toLowerCase().includes(filterStudent.toLowerCase())).map((qa) => {
           const course = mockCourses.find(c => c.id === qa.courseId);
 
           return (

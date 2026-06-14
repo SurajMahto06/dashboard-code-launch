@@ -77,7 +77,7 @@ export default function NewCoursePage() {
       <form onSubmit={handleCreateCourse} className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 shadow-xl space-y-8">
 
         <div>
-          <label className="block text-[13px] font-medium text-zinc-300 mb-1.5">Course Title</label>
+          <label className="block text-sm sm:text-[15px] font-medium text-zinc-300 mb-2">Course Title</label>
           <input
             value={title}
             onChange={e => setTitle(e.target.value)}
@@ -89,7 +89,7 @@ export default function NewCoursePage() {
         </div>
 
         <div>
-          <label className="block text-[13px] font-medium text-zinc-300 mb-1.5">Description</label>
+          <label className="block text-sm sm:text-[15px] font-medium text-zinc-300 mb-2">Description</label>
           <textarea
             value={description}
             onChange={e => setDescription(e.target.value)}
@@ -100,12 +100,12 @@ export default function NewCoursePage() {
           />
         </div>
 
-        <div>
-          <label className="block text-xs font-medium text-zinc-300 mb-2 flex items-center">
-            <ImageIcon className="w-4 h-4 mr-2" />
+        <div className="w-full md:w-1/2">
+          <label className="block text-sm sm:text-[15px] font-medium text-zinc-300 mb-2 flex items-center">
+            <ImageIcon className="w-4.5 h-4.5 mr-2" />
             Course Thumbnail (Image Upload)
           </label>
-          <div className="border-2 border-dashed border-zinc-700 hover:border-cyan-500 bg-zinc-950 rounded-xl p-4 sm:p-6 text-center transition-colors relative group overflow-hidden">
+          <div className="border-2 border-dashed border-zinc-700 hover:border-cyan-500 bg-zinc-950 rounded-xl text-center transition-colors relative group overflow-hidden h-40 sm:h-48 flex items-center justify-center">
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
@@ -118,14 +118,14 @@ export default function NewCoursePage() {
               <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${previewUrl}')` }}>
                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center">
                   <UploadCloud className="w-8 h-8 text-white mb-2" />
-                  <p className="text-white font-medium text-[13px]">Click to change image</p>
+                  <p className="text-white font-medium text-xs sm:text-[13px]">Click to change image</p>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center py-6">
+              <div className="flex flex-col items-center p-4">
                 <UploadCloud className="w-12 h-12 text-zinc-500 group-hover:text-cyan-400 transition-colors mb-3" />
-                <p className="text-zinc-300 font-medium mb-1">Click or drag image to upload</p>
-                <p className="text-zinc-500 text-[13px]">JPG, PNG, WebP up to 5MB</p>
+                <p className="text-zinc-300 font-medium text-xs sm:text-[13px] mb-1">Click or drag image to upload</p>
+                <p className="text-zinc-500 text-[11px] sm:text-xs">JPG, PNG, WebP up to 5MB</p>
               </div>
             )}
           </div>
