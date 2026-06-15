@@ -13,7 +13,8 @@ import {
   GraduationCap,
   ShieldCheck,
   FileText,
-  X
+  X,
+  Award
 } from "lucide-react";
 import { useAuth } from "./auth-provider";
 
@@ -31,6 +32,7 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setI
           { name: "System Overview", href: "/", icon: LayoutDashboard },
           { name: "User Management", href: "/users", icon: Users },
           { name: "Course Builder", href: "/courses", icon: BookOpen },
+          { name: "Issue Certificate", href: "/issue-certificate", icon: Award },
           { name: "Global Settings", href: "/settings", icon: Settings },
         ];
       case "mentor":

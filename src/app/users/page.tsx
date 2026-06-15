@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
 import { mockUsersDB, mockCourses } from "@/data/mock-dashboard";
-import { Users as UsersIcon, Search, ShieldAlert, Edit, Trash2, Plus } from "lucide-react";
+import { Users as UsersIcon, Search, ShieldAlert, Edit, Trash2, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -13,6 +13,9 @@ import { Button } from "@/components/ui/button";
 export default function UsersPage() {
   const { user } = useAuth();
   const [usersList, setUsersList] = useState(mockUsersDB);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const saved = localStorage.getItem("mockUsersDB");
@@ -77,6 +80,13 @@ export default function UsersPage() {
     );
   }
 
+  const filteredUsers = usersList.filter(u => 
+    u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    u.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   return (
     <div className="w-full pb-12 ">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
@@ -96,6 +106,11 @@ export default function UsersPage() {
               type="text"
               className="md:w-64 pl-10"
               placeholder="Search users..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
             />
           </div>
           <Link href="/users/new" tabIndex={-1}>
@@ -112,6 +127,7 @@ export default function UsersPage() {
           <table className="w-full text-left text-xs sm:text-[13px] lg:text-sm text-zinc-400 min-w-[800px]">
             <thead className="text-xs text-zinc-500 uppercase bg-zinc-950 ">
               <tr>
+                <th scope="col" className="px-6 py-4 whitespace-nowrap w-16">S.No.</th>
                 <th scope="col" className="px-6 py-4 whitespace-nowrap">Name</th>
                 <th scope="col" className="px-6 py-4 whitespace-nowrap">Email</th>
                 <th scope="col" className="px-6 py-4 whitespace-nowrap">Role</th>
@@ -122,9 +138,21 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/50">
-              {usersList.map((u: any) => (
-                <tr key={u.id} className="hover:bg-zinc-800/30 transition-colors">
-                  <td className="px-6 py-4 font-medium text-white flex items-center whitespace-nowrap">
+              {paginatedUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-8 text-center text-zinc-500">
+                    No users found.
+                  </td>
+                </tr>
+              ) : (
+                paginatedUsers.map((u: any, index: number) => {
+                  const serialNumber = (currentPage - 1) * itemsPerPage + index + 1;
+                  return (
+                    <tr key={u.id} className="hover:bg-zinc-800/30 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-zinc-500 font-medium">
+                        {serialNumber}
+                      </td>
+                      <td className="px-6 py-4 font-medium text-white flex items-center whitespace-nowrap">
                     <div className="w-8 h-8 rounded-full bg-cyan-900 flex items-center justify-center text-cyan-400 font-bold mr-3 shrink-0">
                       {u.name.charAt(0)}
                     </div>
@@ -177,11 +205,66 @@ export default function UsersPage() {
                     </Button>
                   </td>
                 </tr>
-              ))}
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {filteredUsers.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-4">
+          <div className="flex items-center gap-4">
+            <p className="text-xs text-zinc-500">
+              Showing <span className="font-medium text-zinc-300">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium text-zinc-300">{Math.min(currentPage * itemsPerPage, filteredUsers.length)}</span> of <span className="font-medium text-zinc-300">{filteredUsers.length}</span> results
+            </p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-500">Rows per page:</span>
+              <select 
+                value={itemsPerPage}
+                onChange={(e) => {
+                  setItemsPerPage(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-md px-2 py-1 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="h-8 border-zinc-800 bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Prev
+            </Button>
+            
+            <span className="text-xs text-zinc-500 px-2 font-medium">
+              Page {currentPage} of {totalPages === 0 ? 1 : totalPages}
+            </span>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage >= totalPages || totalPages === 0}
+              className="h-8 border-zinc-800 bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

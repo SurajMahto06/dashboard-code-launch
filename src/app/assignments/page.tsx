@@ -2,14 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { FileText, Check, X, ExternalLink, Plus, BookOpen, User as UserIcon, Calendar, Clock, Upload, GitBranch, Download, Trash2 } from "lucide-react";
+import { FileText, Check, X, ExternalLink, Plus, BookOpen, User as UserIcon, Calendar, Clock, Upload, GitBranch, Download, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Assignment, mockAssignmentsDB, mockUsersDB, mockCourses } from "@/data/mock-dashboard";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 export default function AssignmentsPage() {
   const { user } = useAuth();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [activeTab, setActiveTab] = useState<'review' | 'assign'>('review');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Form State for Mentor Assigning
   const [selectedStudentId, setSelectedStudentId] = useState("");
@@ -329,6 +332,8 @@ export default function AssignmentsPage() {
 
   // Render Mentor View
   const mentorAssignments = assignments.filter(a => a.mentorId === user.id);
+  const totalPages = Math.ceil(mentorAssignments.length / itemsPerPage);
+  const paginatedAssignments = mentorAssignments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <div className="w-full pb-12 ">
@@ -438,11 +443,13 @@ export default function AssignmentsPage() {
           </form>
         </div>
       ) : (
+        <>
         <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xl">
           <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left text-xs sm:text-[13px] lg:text-sm text-zinc-400 min-w-[800px]">
               <thead className="text-xs text-zinc-500 uppercase bg-zinc-950  whitespace-nowrap">
                 <tr>
+                  <th className="px-6 py-4 whitespace-nowrap w-16">S.No.</th>
                   <th className="px-6 py-4 whitespace-nowrap">Student</th>
                   <th className="px-6 py-4 whitespace-nowrap">Assignment Details</th>
                   <th className="px-6 py-4 whitespace-nowrap">Status</th>
@@ -450,12 +457,23 @@ export default function AssignmentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800/50">
-                {mentorAssignments.map((assignment) => {
+                {paginatedAssignments.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-zinc-500 whitespace-nowrap">
+                      No assignments found. Use the 'New Assignment' tab to create one.
+                    </td>
+                  </tr>
+                ) : (
+                paginatedAssignments.map((assignment, index) => {
                   const studentName = mockUsersDB.find(u => u.id === assignment.studentId)?.name || 'Unknown';
                   const courseName = mockCourses.find(c => c.id === assignment.courseId)?.title || 'Unknown';
+                  const serialNumber = (currentPage - 1) * itemsPerPage + index + 1;
 
                   return (
                     <tr key={assignment.id} className="hover:bg-zinc-800/30 transition-colors">
+                      <td className="px-6 py-5 whitespace-nowrap text-zinc-500 font-medium">
+                        {serialNumber}
+                      </td>
                       <td className="px-6 py-5 whitespace-nowrap">
                         <div className="font-medium text-white flex items-center">
                           <UserIcon className="w-4 h-4 mr-2 text-zinc-500" />
@@ -527,18 +545,66 @@ export default function AssignmentsPage() {
                       </td>
                     </tr>
                   );
-                })}
-                {mentorAssignments.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="px-6 py-8 text-center text-zinc-500 whitespace-nowrap">
-                      No assignments found. Use the 'New Assignment' tab to create one.
-                    </td>
-                  </tr>
-                )}
+                })
+              )}
               </tbody>
             </table>
           </div>
         </div>
+
+        {mentorAssignments.length > 0 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-4">
+            <div className="flex items-center gap-4">
+              <p className="text-xs text-zinc-500">
+                Showing <span className="font-medium text-zinc-300">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium text-zinc-300">{Math.min(currentPage * itemsPerPage, mentorAssignments.length)}</span> of <span className="font-medium text-zinc-300">{mentorAssignments.length}</span> results
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-zinc-500">Rows per page:</span>
+                <select 
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    setItemsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-md px-2 py-1 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="h-8 border-zinc-800 bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
+                Prev
+              </Button>
+              
+              <span className="text-xs text-zinc-500 px-2 font-medium">
+                Page {currentPage} of {totalPages === 0 ? 1 : totalPages}
+              </span>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages || totalPages === 0}
+                className="h-8 border-zinc-800 bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+              >
+                Next
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
+        </>
       )}
     </div>
   );

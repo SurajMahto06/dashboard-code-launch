@@ -435,3 +435,21 @@ Please ensure your database is optimized for heavy read/write chat operations.`,
     assignedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
   }
 ];
+
+export interface Certificate {
+  id: string;
+  studentId: string;
+  courseId: string;
+  certificateId: string;
+  issueDate: string;
+}
+
+export const mockCertificatesDB: Certificate[] = [
+  {
+    id: "cert-1",
+    studentId: "usr-student-1",
+    courseId: "course-fullstack",
+    certificateId: "CL-2026-AD102",
+    issueDate: "2026-06-15",
+  }
+];
