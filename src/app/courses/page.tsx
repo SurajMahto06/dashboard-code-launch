@@ -1,19 +1,54 @@
 "use client";
 
+import { useState } from "react";
+
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { mockCourses } from "@/data/mock-dashboard";
-import { BookOpen, Plus, Edit3, Trash2, ArrowRight } from "lucide-react";
+import { BookOpen, Plus, Edit3, Trash2, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { coursesService } from "@/services/courses";
 
 export default function CoursesPage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  const [courseToDelete, setCourseToDelete] = useState<{ id: string; title: string } | null>(null);
+
+  const { data: courses = [], isLoading } = useQuery({
+    queryKey: ['courses'],
+    queryFn: () => coursesService.getCourses(),
+    enabled: !!user,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (courseId: string) => coursesService.deleteCourse(courseId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      setCourseToDelete(null);
+    },
+  });
+
+  const confirmDelete = () => {
+    if (courseToDelete) {
+      deleteMutation.mutate(courseToDelete.id);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
+      </div>
+    );
+  }
 
   if (user?.role === "admin") {
     return (
-      <div className="w-full pb-12">
+      <div className="w-full pb-12 relative">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
           <div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-white mb-6 flex items-center">
@@ -30,44 +65,68 @@ export default function CoursesPage() {
           </Link>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockCourses.map(course => (
-            <Card key={course.id} className="overflow-hidden group p-0 border-0">
-              <div
-                className="h-32 relative bg-cover bg-center"
-                style={{ backgroundImage: `url('${course.thumbnail}')` }}
-              >
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
-              </div>
-              <div className="p-4 sm:p-6">
-                <h3 className="text-sm sm:text-base lg:text-lg font-semibold text-white mb-2">{course.title}</h3>
-                <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400 mb-4 line-clamp-2">{course.description}</p>
-                <div className="flex items-center justify-between pt-4 ">
-                  <Badge variant="default">
-                    {course.totalTopics} Topics
-                  </Badge>
-                  <div className="flex gap-2">
-                    <Link href={`/courses/${course.id}/edit`} tabIndex={-1}>
-                      <Button variant="outline" size="icon" title="Edit Course Content">
-                        <Edit3 className="w-4 h-4" />
+        {courses.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-zinc-500 mb-4">No courses created yet.</p>
+            <Link href="/courses/new">
+              <Button variant="outline">Create First Course</Button>
+            </Link>
+          </div>
+        ) : (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {courses.map(course => (
+              <Card key={course.id} className="overflow-hidden group p-0 border-0 shadow-lg hover:shadow-cyan-900/20 transition-all duration-300">
+                <div
+                  className="h-32 relative bg-cover bg-center"
+                  style={{ backgroundImage: `url('${course.thumbnail}')` }}
+                >
+                  <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
+                </div>
+                <div className="p-4 sm:p-6 bg-zinc-900 border-t border-zinc-800">
+                  <h3 className="text-sm sm:text-base lg:text-lg font-bold text-white mb-2">{course.title}</h3>
+                  <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400 mb-4 line-clamp-2">{course.description}</p>
+                  <div className="flex items-center justify-between pt-4 border-t border-zinc-800">
+                    <Badge variant="default" className="bg-cyan-950 text-cyan-400 hover:bg-cyan-900 border-0">
+                      {course.totalTopics || 0} Topics
+                    </Badge>
+                    <div className="flex gap-2">
+                      <Link href={`/courses/${course.id}/edit`} tabIndex={-1}>
+                        <Button variant="outline" size="icon" title="Edit Course Content" className="bg-zinc-800 border-zinc-700 hover:bg-zinc-700 hover:text-cyan-400 transition-colors">
+                          <Edit3 className="w-4 h-4" />
+                        </Button>
+                      </Link>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="bg-zinc-800 border-zinc-700 hover:text-red-400 hover:border-red-900 hover:bg-red-950/30 transition-colors" 
+                        title="Delete Course"
+                        onClick={() => setCourseToDelete({ id: course.id, title: course.title })}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
-                    </Link>
-                    <Button variant="outline" size="icon" className="hover:text-red-400 hover:bg-zinc-900" title="Delete Course">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        <ConfirmModal
+          isOpen={!!courseToDelete}
+          onClose={() => setCourseToDelete(null)}
+          onConfirm={confirmDelete}
+          title="Delete Course?"
+          description={`Are you sure you want to delete "${courseToDelete?.title}"? This action cannot be undone and all associated modules and topics will be permanently removed.`}
+          isLoading={deleteMutation.isPending}
+        />
       </div>
     );
   }
 
   // Student View
-  const enrolledCourses = mockCourses.filter(c => user?.enrolledCourseIds?.includes(c.id));
-  const otherCourses = mockCourses.filter(c => !user?.enrolledCourseIds?.includes(c.id));
+  const enrolledCourses = courses.filter(c => user?.enrolledCourseIds?.includes(c.id));
+  const otherCourses = courses.filter(c => !user?.enrolledCourseIds?.includes(c.id));
 
   return (
     <div className="w-full pb-12 space-y-12 ">

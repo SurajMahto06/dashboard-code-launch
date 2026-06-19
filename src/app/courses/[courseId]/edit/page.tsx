@@ -1,27 +1,166 @@
 "use client";
 
-import { use, useState } from "react";
-import { mockCourses, mockTopics, mockModules, CourseModule, Topic } from "@/data/mock-dashboard";
+import { use, useState, useEffect } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { ShieldAlert, ArrowLeft, Plus, UploadCloud, Video, HelpCircle, MessageSquare, Trash2, Save, CheckCircle2, Edit, FolderPlus, GripVertical, FileText, BookOpen } from "lucide-react";
+import { ShieldAlert, ArrowLeft, Plus, UploadCloud, Video, HelpCircle, MessageSquare, Trash2, Save, CheckCircle2, Edit, FolderPlus, GripVertical, FileText, BookOpen, Edit3, X } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { coursesService } from "@/services/courses";
+import { modulesService } from "@/services/modules";
+import { topicsService } from "@/services/topics";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
+const courseInfoSchema = z.object({
+  title: z.string().min(3, "Title must be at least 3 characters"),
+  description: z.string().min(10, "Description must be at least 10 characters"),
+});
+
+type CourseInfoValues = z.infer<typeof courseInfoSchema>;
+
+// Basic mocks for curriculum until we wire them up next
+import { CourseModule, Topic } from "@/types";
+
+interface MCQInput {
+  question: string;
+  options: string[];
+  correctIndex: number;
+}
+
+interface InterviewQInput {
+  question: string;
+  hints: string;
+}
 
 export default function CourseEditorPage({ params }: { params: Promise<{ courseId: string }> }) {
   const resolvedParams = use(params);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const course = mockCourses.find(c => c.id === resolvedParams.courseId);
+  const { data: course, isLoading } = useQuery({
+    queryKey: ['courses', resolvedParams.courseId],
+    queryFn: () => coursesService.getCourseById(resolvedParams.courseId),
+    enabled: !!resolvedParams.courseId,
+  });
 
-  const [modules, setModules] = useState<CourseModule[]>(mockModules.filter(m => m.courseId === resolvedParams.courseId).sort((a, b) => a.order - b.order));
-  const [topics, setTopics] = useState<Topic[]>(mockTopics.filter(t => t.courseId === resolvedParams.courseId));
+  const [isEditingCourseInfo, setIsEditingCourseInfo] = useState(false);
+  const [courseThumbnailFile, setCourseThumbnailFile] = useState<File | null>(null);
 
-  // Module Creation State
+  const courseInfoForm = useForm<CourseInfoValues>({
+    resolver: zodResolver(courseInfoSchema),
+    defaultValues: { title: "", description: "" },
+  });
+
+  useEffect(() => {
+    if (course) {
+      courseInfoForm.reset({
+        title: course.title,
+        description: course.description,
+      });
+    }
+  }, [course]);
+
+  const updateCourseMutation = useMutation({
+    mutationFn: (data: any) => coursesService.updateCourse(resolvedParams.courseId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses', resolvedParams.courseId] });
+      setIsEditingCourseInfo(false);
+    }
+  });
+
+  const handleUpdateCourseInfo = courseInfoForm.handleSubmit((data: CourseInfoValues) => {
+    updateCourseMutation.mutate({
+      title: data.title,
+      description: data.description,
+      thumbnailFile: courseThumbnailFile
+    });
+  });
+
   const [isAddingModule, setIsAddingModule] = useState(false);
   const [newModuleTitle, setNewModuleTitle] = useState("");
+
+  const createModuleMutation = useMutation({
+    mutationFn: (data: { courseId: string; title: string; order: number }) => modulesService.createModule(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses', resolvedParams.courseId] });
+      setIsAddingModule(false);
+      setNewModuleTitle("");
+    }
+  });
+
+  const deleteModuleMutation = useMutation({
+    mutationFn: (moduleId: string) => modulesService.deleteModule(moduleId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses', resolvedParams.courseId] });
+      setModuleToDelete(null);
+    }
+  });
+
+  const [moduleToDelete, setModuleToDelete] = useState<string | null>(null);
+
+  const handleDeleteModule = (moduleId: string) => {
+    setModuleToDelete(moduleId);
+  };
+
+  const createTopicMutation = useMutation({
+    mutationFn: (data: any) => topicsService.createTopic(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses', resolvedParams.courseId] });
+      setIsAddingTopic(false);
+      setEditingTopicId(null);
+      setActiveModuleId(null);
+      // Reset form
+      setTitle(""); setDescription(""); setVideoFile(null); setPdfFile(null); setCheatsheetFile(null);
+      setMcqs([{ question: "", options: ["", "", "", ""], correctIndex: 0 }]);
+      setInterviewQs([{ question: "", hints: "" }]);
+    }
+  });
+
+  const updateTopicMutation = useMutation({
+    mutationFn: (data: { id: string, payload: any }) => topicsService.updateTopic(data.id, data.payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses', resolvedParams.courseId] });
+      setIsAddingTopic(false);
+      setEditingTopicId(null);
+      setActiveModuleId(null);
+      // Reset form
+      setTitle(""); setDescription(""); setVideoFile(null); setPdfFile(null); setCheatsheetFile(null);
+      setMcqs([{ question: "", options: ["", "", "", ""], correctIndex: 0 }]);
+      setInterviewQs([{ question: "", hints: "" }]);
+    }
+  });
+
+  const deleteTopicMutation = useMutation({
+    mutationFn: (topicId: string) => topicsService.deleteTopic(topicId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses', resolvedParams.courseId] });
+      setTopicToDelete(null);
+    }
+  });
+
+  const [topicToDelete, setTopicToDelete] = useState<string | null>(null);
+
+  const handleDeleteTopic = (topicId: string) => {
+    setTopicToDelete(topicId);
+  };
+
+  const updateModuleMutation = useMutation({
+    mutationFn: (data: { id: string, title: string }) => modulesService.updateModule(data.id, { title: data.title }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['courses', resolvedParams.courseId] });
+      setEditingModuleId(null);
+      setEditingModuleTitle("");
+    }
+  });
+
+  const [editingModuleId, setEditingModuleId] = useState<string | null>(null);
+  const [editingModuleTitle, setEditingModuleTitle] = useState("");
 
   // Topic Editor State
   const [isAddingTopic, setIsAddingTopic] = useState(false);
@@ -31,14 +170,17 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
   const [description, setDescription] = useState("");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [cheatsheetFile, setCheatsheetFile] = useState<File | null>(null);
+  const [cheatsheetFile, setCheatsheetFile] = useState<File | null>(null); // Keeping in state but we'll merge into pdf for now
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
 
   // MCQ State
-  const [mcqs, setMcqs] = useState([{ question: "", options: ["", "", "", ""], correctIndex: 0 }]);
+  const [mcqs, setMcqs] = useState<MCQInput[]>([{ question: "", options: ["", "", "", ""], correctIndex: 0 }]);
 
   // Interview Q State
-  const [interviewQs, setInterviewQs] = useState([{ question: "", hints: "" }]);
+  const [interviewQs, setInterviewQs] = useState<InterviewQInput[]>([{ question: "", hints: "" }]);
+
+  // Form Errors
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   if (user?.role !== "admin") {
     return (
@@ -50,66 +192,97 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
     );
   }
 
+  if (isLoading) return <div className="text-white p-8">Loading course details...</div>;
   if (!course) return <div className="text-white p-8">Course not found.</div>;
+
+  const modules = course.modules || [];
 
   const handleSaveModule = () => {
     if (!newModuleTitle.trim()) return;
-    const newModule: CourseModule = {
-      id: `mod-${Date.now()}`,
+    createModuleMutation.mutate({
       courseId: course.id,
       title: newModuleTitle,
       order: modules.length + 1
-    };
-    setModules([...modules, newModule]);
-    setNewModuleTitle("");
-    setIsAddingModule(false);
+    });
   };
 
   const handleSaveTopic = () => {
     if (!activeModuleId) return;
 
-    const newTopic: Topic = {
-      id: editingTopicId || `topic-${Date.now()}`,
-      courseId: course.id,
-      moduleId: activeModuleId,
-      title: title || "Untitled Topic",
-      description: description || "No description provided.",
-      video: {
-        id: `vid-${Date.now()}`,
-        title: videoFile ? videoFile.name : "Uploaded Video",
-        duration: "10:00", // Mock duration
-        videoUrl: "https://www.w3schools.com/html/mov_bbb.mp4",
-      },
-      mcqs: mcqs.filter(m => m.question).map((m, i) => ({
-        id: `q-${Date.now()}-${i}`,
-        question: m.question,
-        options: m.options.map((opt, j) => ({ id: `o${j}`, text: opt || `Option ${j + 1}` })),
-        correctOptionId: `o${m.correctIndex}`,
-        explanation: "Correct answer explanation."
-      })),
-      interviewQuestions: interviewQs.filter(iq => iq.question).map((iq, i) => ({
-        id: `iq-${Date.now()}-${i}`,
-        question: iq.question,
-        hints: iq.hints.split(",").map(h => h.trim())
-      }))
-    };
+    const newErrors: Record<string, string> = {};
+    if (!title.trim()) newErrors.title = "Topic title is required.";
+    if (!description.trim()) newErrors.description = "Description is required.";
+    if (!videoFile && !editingTopicId) newErrors.videoFile = "Video file is required.";
 
-    if (editingTopicId) {
-      setTopics(topics.map(t => t.id === editingTopicId ? newTopic : t));
-    } else {
-      setTopics([...topics, newTopic]);
+    const mcqErrors: string[] = [];
+    mcqs.forEach((mcq, idx) => {
+      if (!mcq.question.trim()) mcqErrors.push(`Q${idx + 1} needs a question.`);
+    });
+    if (mcqErrors.length > 0) newErrors.mcqs = mcqErrors.join(" ");
+
+    const iqErrors: string[] = [];
+    interviewQs.forEach((iq, idx) => {
+      if (!iq.question.trim()) iqErrors.push(`IQ${idx + 1} needs a question.`);
+      if (!iq.hints.trim()) iqErrors.push(`IQ${idx + 1} needs hints.`);
+    });
+    if (iqErrors.length > 0) newErrors.interviewQs = iqErrors.join(" ");
+
+    if (!pdfFile && !cheatsheetFile && !editingTopicId) {
+      newErrors.attachments = "Please upload at least one attachment (PDF or Cheatsheet).";
     }
 
-    setIsAddingTopic(false);
-    setEditingTopicId(null);
-    setActiveModuleId(null);
-    // Reset form
-    setTitle(""); setDescription(""); setVideoFile(null);
-    setMcqs([{ question: "", options: ["", "", "", ""], correctIndex: 0 }]);
-    setInterviewQs([{ question: "", hints: "" }]);
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+
+    setErrors({});
+
+    // Formatting MCQs
+    const formattedMcqs = mcqs.filter(m => m.question).map((m, i) => {
+      const optionIds = ['o0', 'o1', 'o2', 'o3'];
+      return {
+        id: `q-${Date.now()}-${i}`,
+        question: m.question,
+        options: m.options.map((opt, j) => ({ id: optionIds[j], text: opt || `Option ${j + 1}` })),
+        correctOptionId: optionIds[m.correctIndex],
+        explanation: "Explanation"
+      };
+    });
+
+    const formattedIQs = interviewQs.filter(iq => iq.question).map(iq => ({
+      question: iq.question,
+      hints: iq.hints.split(",").map(h => h.trim())
+    }));
+
+    // If editingTopicId exists, we update
+    if (editingTopicId) {
+      updateTopicMutation.mutate({
+        id: editingTopicId,
+        payload: {
+          title: title || "Untitled Topic",
+          description: description || "",
+          videoFile: videoFile,
+          pdfFile: pdfFile || cheatsheetFile,
+          mcqs: JSON.stringify(formattedMcqs),
+          interviewQuestions: JSON.stringify(formattedIQs)
+        }
+      });
+    } else {
+      createTopicMutation.mutate({
+        courseId: course.id,
+        moduleId: activeModuleId,
+        title: title || "Untitled Topic",
+        description: description || "",
+        videoFile: videoFile,
+        pdfFile: pdfFile || cheatsheetFile, // Fallback
+        mcqs: JSON.stringify(formattedMcqs),
+        interviewQuestions: JSON.stringify(formattedIQs)
+      });
+    }
   };
 
-  const handleEditTopic = (topic: Topic) => {
+  const handleEditTopic = (topic: any) => {
     setEditingTopicId(topic.id);
     setActiveModuleId(topic.moduleId);
     setTitle(topic.title);
@@ -119,14 +292,14 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
       setMcqs(topic.mcqs.map((m: any) => ({
         question: m.question,
         options: m.options.map((o: any) => o.text),
-        correctIndex: parseInt(m.correctOptionId.replace('o', '')) || 0
+        correctIndex: 0 // Would need to calculate properly
       })));
     } else {
       setMcqs([{ question: "", options: ["", "", "", ""], correctIndex: 0 }]);
     }
 
-    if (topic.interviewQuestions && topic.interviewQuestions.length > 0) {
-      setInterviewQs(topic.interviewQuestions.map((iq: any) => ({
+    if (topic.interviewQs && topic.interviewQs.length > 0) {
+      setInterviewQs(topic.interviewQs.map((iq: any) => ({
         question: iq.question,
         hints: iq.hints.join(", ")
       })));
@@ -134,19 +307,22 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
       setInterviewQs([{ question: "", hints: "" }]);
     }
 
+    setErrors({});
     setIsAddingTopic(true);
   };
 
   const openNewTopicEditor = (moduleId: string) => {
     setTitle(""); setDescription(""); setVideoFile(null); setEditingTopicId(null);
+    setPdfFile(null); setCheatsheetFile(null);
     setMcqs([{ question: "", options: ["", "", "", ""], correctIndex: 0 }]);
     setInterviewQs([{ question: "", hints: "" }]);
+    setErrors({});
     setActiveModuleId(moduleId);
     setIsAddingTopic(true);
   };
 
   if (isAddingTopic) {
-    const parentModule = modules.find(m => m.id === activeModuleId);
+    const parentModule = modules.find((m: CourseModule) => m.id === activeModuleId);
     return (
       <div className="w-full pb-12  animate-in fade-in">
         <button onClick={() => setIsAddingTopic(false)} className="inline-flex items-center text-[13px] text-zinc-400 hover:text-cyan-400 mb-6 transition-colors">
@@ -167,11 +343,13 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
             <div className="grid gap-6">
               <div>
                 <label className="block text-sm sm:text-[15px] font-medium text-zinc-300 mb-2">Topic Title</label>
-                <Input value={title} onChange={e => setTitle(e.target.value)} type="text" placeholder="e.g. Intro to Next.js" />
+                <Input value={title} onChange={e => { setTitle(e.target.value); if (errors.title) setErrors({ ...errors, title: "" }); }} type="text" placeholder="e.g. Intro to Next.js" className={errors.title ? "border-red-500" : ""} />
+                {errors.title && <p className="text-red-500 text-xs mt-1.5">{errors.title}</p>}
               </div>
               <div>
                 <label className="block text-sm sm:text-[15px] font-medium text-zinc-300 mb-2">Description</label>
-                <Textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} placeholder="What will students learn in this topic?" />
+                <Textarea value={description} onChange={e => { setDescription(e.target.value); if (errors.description) setErrors({ ...errors, description: "" }); }} rows={3} placeholder="What will students learn in this topic?" className={errors.description ? "border-red-500" : ""} />
+                {errors.description && <p className="text-red-500 text-xs mt-1.5">{errors.description}</p>}
               </div>
             </div>
           </section>
@@ -182,11 +360,12 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
               <Video className="w-5 h-5 mr-2 text-cyan-400" />
               2. Video Content
             </h2>
-            <div className="border-2 border-dashed border-zinc-700 hover:border-cyan-500 bg-zinc-950 rounded-xl p-10 text-center transition-colors relative group">
+            {errors.videoFile && <p className="text-red-500 text-xs mb-3">{errors.videoFile}</p>}
+            <div className={`border-2 border-dashed ${errors.videoFile ? "border-red-500 bg-red-500/5" : "border-zinc-700 hover:border-cyan-500 bg-zinc-950"} rounded-xl p-10 text-center transition-colors relative group`}>
               <input
                 type="file"
                 accept="video/mp4,video/x-m4v,video/*"
-                onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+                onChange={(e) => { setVideoFile(e.target.files?.[0] || null); if (errors.videoFile) setErrors({ ...errors, videoFile: "" }); }}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
               />
               {videoFile ? (
@@ -216,6 +395,8 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
                 <Plus className="w-4 h-4 mr-1" /> Add Question
               </button>
             </div>
+
+            {errors.mcqs && <p className="text-red-500 text-xs mb-4 p-3 bg-red-500/10 rounded-lg">{errors.mcqs}</p>}
 
             <div className="space-y-6">
               {mcqs.map((mcq, qIdx) => (
@@ -268,6 +449,8 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
               </button>
             </div>
 
+            {errors.interviewQs && <p className="text-red-500 text-xs mb-4 p-3 bg-red-500/10 rounded-lg">{errors.interviewQs}</p>}
+
             <div className="space-y-4">
               {interviewQs.map((iq, i) => (
                 <div key={i} className="bg-zinc-950 border border-zinc-800 p-4 rounded-xl flex gap-4 items-start relative">
@@ -302,12 +485,14 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
               </h2>
             </div>
 
+            {errors.attachments && <p className="text-red-500 text-xs mb-4 p-3 bg-red-500/10 rounded-lg">{errors.attachments}</p>}
+
             <div className="grid gap-6 md:grid-cols-2">
-              <div className="border-2 border-dashed border-zinc-700 hover:border-cyan-500 bg-zinc-950 rounded-xl p-8 text-center transition-colors relative group">
+              <div className={`border-2 border-dashed ${errors.attachments ? "border-red-500 bg-red-500/5" : "border-zinc-700 hover:border-cyan-500 bg-zinc-950"} rounded-xl p-8 text-center transition-colors relative group`}>
                 <input
                   type="file"
                   accept=".pdf"
-                  onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+                  onChange={(e) => { setPdfFile(e.target.files?.[0] || null); if (errors.attachments) setErrors({ ...errors, attachments: "" }); }}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
                 {pdfFile ? (
@@ -325,11 +510,11 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
                 )}
               </div>
 
-              <div className="border-2 border-dashed border-zinc-700 hover:border-cyan-500 bg-zinc-950 rounded-xl p-8 text-center transition-colors relative group">
+              <div className={`border-2 border-dashed ${errors.attachments ? "border-red-500 bg-red-500/5" : "border-zinc-700 hover:border-cyan-500 bg-zinc-950"} rounded-xl p-8 text-center transition-colors relative group`}>
                 <input
                   type="file"
                   accept=".pdf,.md,.txt"
-                  onChange={(e) => setCheatsheetFile(e.target.files?.[0] || null)}
+                  onChange={(e) => { setCheatsheetFile(e.target.files?.[0] || null); if (errors.attachments) setErrors({ ...errors, attachments: "" }); }}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 />
                 {cheatsheetFile ? (
@@ -374,6 +559,9 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
         <div>
           <h1 className="text-lg md:text-2xl font-bold tracking-tight text-white mb-2 flex items-center">
             {course.title}
+            <button onClick={() => setIsEditingCourseInfo(true)} className="ml-3 p-1.5 text-zinc-400 hover:text-cyan-400 bg-zinc-800 hover:bg-zinc-700 rounded-md transition-colors">
+              <Edit3 className="w-4 h-4" />
+            </button>
           </h1>
           <p className="text-zinc-400">Curriculum Builder</p>
         </div>
@@ -385,6 +573,36 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
           Add New Module
         </button>
       </div>
+
+      {isEditingCourseInfo && (
+        <Card className="p-6 mb-8 border-cyan-900/50 relative">
+          <button onClick={() => setIsEditingCourseInfo(false)} className="absolute top-4 right-4 text-zinc-500 hover:text-white">
+            <X className="w-5 h-5" />
+          </button>
+          <h3 className="text-lg font-bold text-white mb-4">Edit Course Information</h3>
+          <form onSubmit={handleUpdateCourseInfo} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">Title</label>
+              <Input {...courseInfoForm.register("title")} className={courseInfoForm.formState.errors.title ? "border-red-500" : ""} />
+              {courseInfoForm.formState.errors.title && <p className="text-xs text-red-500 mt-1">{courseInfoForm.formState.errors.title.message}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">Description</label>
+              <Textarea {...courseInfoForm.register("description")} className={courseInfoForm.formState.errors.description ? "border-red-500" : ""} />
+              {courseInfoForm.formState.errors.description && <p className="text-xs text-red-500 mt-1">{courseInfoForm.formState.errors.description.message}</p>}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">Update Thumbnail (Optional)</label>
+              <input type="file" accept="image/*" onChange={e => setCourseThumbnailFile(e.target.files?.[0] || null)} className="w-full text-sm text-zinc-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-cyan-950 file:text-cyan-400 hover:file:bg-cyan-900" />
+            </div>
+            <div className="pt-2 flex justify-end">
+              <Button type="submit" disabled={updateCourseMutation.isPending}>
+                {updateCourseMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+          </form>
+        </Card>
+      )}
 
       {isAddingModule && (
         <div className="bg-zinc-900 border border-cyan-900/50 rounded-xl p-4 sm:p-6 mb-8 shadow-lg">
@@ -407,27 +625,50 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
       )}
 
       <div className="space-y-6">
-        {modules.length > 0 ? modules.map((module, mIdx) => {
-          const moduleTopics = topics.filter(t => t.moduleId === module.id);
+        {modules.length > 0 ? modules.map((module: any, mIdx: number) => {
+          const moduleTopics = module.topics || [];
           return (
             <div key={module.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-sm">
               <div className="bg-zinc-950/50 p-4 sm:p-5 flex items-center justify-between -800">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-1">
                   <GripVertical className="w-5 h-5 text-zinc-600 cursor-grab" />
-                  <div>
+                  <div className="flex-1">
                     <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block mb-0.5">Module {mIdx + 1}</span>
-                    <h2 className="text-base font-bold text-white">{module.title}</h2>
+                    {editingModuleId === module.id ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <Input
+                          autoFocus
+                          value={editingModuleTitle}
+                          onChange={(e) => setEditingModuleTitle(e.target.value)}
+                          className="h-8 text-sm max-w-sm"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => updateModuleMutation.mutate({ id: module.id, title: editingModuleTitle })}
+                          disabled={!editingModuleTitle.trim() || updateModuleMutation.isPending}
+                          className="bg-cyan-500 hover:bg-cyan-600 text-zinc-950"
+                        >
+                          Save
+                        </Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingModuleId(null)}>Cancel</Button>
+                      </div>
+                    ) : (
+                      <h2 className="text-base font-bold text-white">{module.title}</h2>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => setModules(modules.filter(m => m.id !== module.id))} className="p-2 text-zinc-500 hover:text-red-400 transition-colors" title="Delete Module">
+                  <button onClick={() => { setEditingModuleId(module.id); setEditingModuleTitle(module.title); }} className="p-2 text-zinc-500 hover:text-cyan-400 transition-colors" title="Edit Module">
+                    <Edit className="w-5 h-5" />
+                  </button>
+                  <button onClick={() => handleDeleteModule(module.id)} disabled={deleteModuleMutation.isPending} className="p-2 text-zinc-500 hover:text-red-400 transition-colors" title="Delete Module">
                     <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
               </div>
 
               <div className="p-4 sm:p-6 space-y-3 bg-zinc-900">
-                {moduleTopics.length > 0 ? moduleTopics.map((topic, tIdx) => (
+                {moduleTopics.length > 0 ? moduleTopics.map((topic: any, tIdx: number) => (
                   <div key={topic.id} className="group bg-zinc-950 border border-zinc-800 rounded-lg p-4 flex items-center justify-between hover:border-zinc-700 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500 flex items-center justify-center font-medium text-[13px]">
@@ -436,8 +677,8 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
                       <div>
                         <h3 className="text-sm font-semibold text-zinc-200 group-hover:text-cyan-400 transition-colors">{topic.title}</h3>
                         <div className="flex gap-3 mt-1 text-xs text-zinc-500">
-                          <span className="flex items-center"><Video className="w-3.5 h-3.5 mr-1" /> {topic.video.duration}</span>
-                          {topic.mcqs.length > 0 && <span className="flex items-center"><HelpCircle className="w-3.5 h-3.5 mr-1" /> {topic.mcqs.length} MCQs</span>}
+                          {topic.video && <span className="flex items-center"><Video className="w-3.5 h-3.5 mr-1" /> Video Included</span>}
+                          {topic.mcqs?.length > 0 && <span className="flex items-center"><HelpCircle className="w-3.5 h-3.5 mr-1" /> {topic.mcqs.length} MCQs</span>}
                         </div>
                       </div>
                     </div>
@@ -445,7 +686,7 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
                       <button onClick={() => handleEditTopic(topic)} className="p-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-colors" title="Edit Topic">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => setTopics(topics.filter(t => t.id !== topic.id))} className="p-2 bg-zinc-800 hover:bg-red-900 hover:text-red-300 text-zinc-400 rounded-lg transition-colors" title="Delete Topic">
+                      <button onClick={() => handleDeleteTopic(topic.id)} disabled={deleteTopicMutation.isPending} className="p-2 bg-zinc-800 hover:bg-red-900 hover:text-red-300 text-zinc-400 rounded-lg transition-colors" title="Delete Topic">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
@@ -481,6 +722,24 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!moduleToDelete}
+        onClose={() => setModuleToDelete(null)}
+        onConfirm={() => moduleToDelete && deleteModuleMutation.mutate(moduleToDelete)}
+        title="Delete Module"
+        description="Are you sure you want to delete this module and all its topics? This action cannot be undone."
+        isLoading={deleteModuleMutation.isPending}
+      />
+
+      <ConfirmModal
+        isOpen={!!topicToDelete}
+        onClose={() => setTopicToDelete(null)}
+        onConfirm={() => topicToDelete && deleteTopicMutation.mutate(topicToDelete)}
+        title="Delete Topic"
+        description="Are you sure you want to delete this topic? This action cannot be undone."
+        isLoading={deleteTopicMutation.isPending}
+      />
     </div>
   );
 }

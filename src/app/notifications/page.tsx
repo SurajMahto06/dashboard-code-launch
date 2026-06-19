@@ -1,68 +1,61 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { AppNotification, mockNotifications } from "@/data/mock-dashboard";
+import { notificationService } from "@/services/notifications";
 import { CheckCircle2, AlertTriangle, Info, Bell, Check, Trash2 } from "lucide-react";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 export default function NotificationsPage() {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (!user) return;
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['notifications', 'all', user?.id],
+    queryFn: () => notificationService.getNotifications(false),
+    enabled: !!user,
+  });
 
-    const saved = localStorage.getItem("mockNotifications");
-    const allNotifications: AppNotification[] = saved ? JSON.parse(saved) : mockNotifications;
+  const readMutation = useMutation({
+    mutationFn: (id: string) => notificationService.markAsRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
+  });
 
-    const userNotifications = allNotifications.filter(
-      (n) => n.userId === user.id || (n.userId === "all" && n.targetRole === user.role)
-    );
+  const readAllMutation = useMutation({
+    mutationFn: () => notificationService.markAllAsRead(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
+  });
 
-    userNotifications.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
-    setNotifications(userNotifications);
-  }, [user]);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => notificationService.deleteNotification(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
+  });
 
   const handleMarkAsRead = (id: string) => {
-    const updated = notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n));
-    setNotifications(updated);
-
-    const saved = localStorage.getItem("mockNotifications");
-    if (saved) {
-      const all: AppNotification[] = JSON.parse(saved);
-      const newAll = all.map((n) => (n.id === id ? { ...n, isRead: true } : n));
-      localStorage.setItem("mockNotifications", JSON.stringify(newAll));
-    }
+    readMutation.mutate(id);
   };
 
   const handleMarkAllAsRead = () => {
-    const updated = notifications.map((n) => ({ ...n, isRead: true }));
-    setNotifications(updated);
-
-    const saved = localStorage.getItem("mockNotifications");
-    if (saved) {
-      const all: AppNotification[] = JSON.parse(saved);
-      const newAll = all.map((n) => {
-        if (n.userId === user?.id || (n.userId === "all" && n.targetRole === user?.role)) {
-          return { ...n, isRead: true };
-        }
-        return n;
-      });
-      localStorage.setItem("mockNotifications", JSON.stringify(newAll));
-    }
+    readAllMutation.mutate();
   };
 
-  const handleDelete = (id: string) => {
-    const updated = notifications.filter((n) => n.id !== id);
-    setNotifications(updated);
+  const [notificationToDelete, setNotificationToDelete] = useState<string | null>(null);
 
-    const saved = localStorage.getItem("mockNotifications");
-    if (saved) {
-      const all: AppNotification[] = JSON.parse(saved);
-      const newAll = all.filter((n) => n.id !== id);
-      localStorage.setItem("mockNotifications", JSON.stringify(newAll));
-    }
+  const handleDelete = (id: string) => {
+    setNotificationToDelete(id);
+  };
+
+  const confirmDelete = () => {
+    if (!notificationToDelete) return;
+    deleteMutation.mutate(notificationToDelete);
+    setNotificationToDelete(null);
   };
 
   const getIconInfo = (type: string) => {
@@ -146,7 +139,7 @@ export default function NotificationsPage() {
                         {notification.title}
                       </h3>
                       <span className="text-[10px] sm:text-[11px] lg:text-xs text-zinc-500 font-medium whitespace-nowrap">
-                        {formatDateTime(notification.date)}
+                        {formatDateTime(notification.createdAt || (notification as any).date)}
                       </span>
                     </div>
                     
@@ -179,6 +172,14 @@ export default function NotificationsPage() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={!!notificationToDelete}
+        onClose={() => setNotificationToDelete(null)}
+        onConfirm={confirmDelete}
+        title="Delete Notification"
+        description="Are you sure you want to delete this notification? This action cannot be undone."
+      />
     </div>
   );
 }

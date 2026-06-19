@@ -1,18 +1,69 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { mockMentorshipQA, mockCourses, MentorshipQA, QAReply } from "@/data/mock-dashboard";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { mockCourses } from "@/data/mock-dashboard";
+import { MentorshipQA, QAReply } from "@/types";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { MessageSquarePlus, Send, UserCircle2, ShieldCheck, CheckCircle2, BookOpen, ChevronDown, ImageIcon, X, Clock } from "lucide-react";
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
+import { qaService } from "@/services/qa";
+import { MessageSquarePlus, Send, UserCircle2, ShieldCheck, CheckCircle2, BookOpen, ChevronDown, ImageIcon, X, Clock, Lock, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+
+const questionSchema = z.object({
+  question: z.string().min(5, "Question must be at least 5 characters long"),
+});
+
+type QuestionValues = z.infer<typeof questionSchema>;
 
 export default function QAPortal() {
   const { user } = useAuth();
-  // Clear local storage logic could be added here, but we will just handle mapping gracefully.
-  const [qaList, setQaList] = useState<MentorshipQA[]>(mockMentorshipQA);
-  const [newQuestion, setNewQuestion] = useState("");
+  const queryClient = useQueryClient();
+
+  const formatQADateTime = (dateString: string | Date) => {
+    const d = new Date(dateString);
+    const datePart = d.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const timePart = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+    return `${datePart} | ${timePart}`;
+  };
+
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isLoading,
+  } = useInfiniteQuery({
+    queryKey: ['qaThreads', 'infinite', user?.id],
+    queryFn: ({ pageParam = 1 }) => qaService.getQAThreads(pageParam, 5),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage && typeof lastPage === 'object' && 'hasMore' in lastPage) {
+        return lastPage.hasMore ? (allPages ? allPages.length + 1 : 2) : undefined;
+      }
+      return undefined;
+    },
+    enabled: !!user
+  });
+
+  const qaList = useMemo(() => {
+    return data
+      ? data.pages.flatMap((page: any) => {
+        if (Array.isArray(page)) return page;
+        return page.threads || [];
+      })
+      : [];
+  }, [data]);
+
   const [newQuestionImages, setNewQuestionImages] = useState<string[]>([]);
   const [filterStudent, setFilterStudent] = useState<string | null>(null);
+
+  const questionForm = useForm<QuestionValues>({
+    resolver: zodResolver(questionSchema),
+    defaultValues: { question: "" },
+  });
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -28,20 +79,44 @@ export default function QAPortal() {
   const [replyImages, setReplyImages] = useState<Record<string, string[]>>({});
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    mockMentorshipQA.forEach((qa, idx) => {
-      if (idx === 0) initial[qa.id] = true; // Open the first discussion by default
-    });
-    return initial;
-  });
+  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
+  const [visibleRepliesCount, setVisibleRepliesCount] = useState<Record<string, number>>({});
+  const [visibleDiscussionsCount, setVisibleDiscussionsCount] = useState(3);
+  const observerTarget = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (observerTarget.current) {
+      observer.observe(observerTarget.current);
+    }
+
+    return () => {
+      if (observerTarget.current) {
+        observer.unobserve(observerTarget.current);
+      }
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  useEffect(() => {
+    if (qaList.length > 0 && Object.keys(expandedIds).length === 0) {
+      setExpandedIds({ [qaList[0].id]: true });
+    }
+  }, [qaList]);
 
   useEffect(() => {
     if (filterStudent) {
-      const matched = qaList.filter(q => q.studentName.toLowerCase().includes(filterStudent.toLowerCase()));
+      const matched = qaList.filter((q: any) => (q.student?.name || q.studentName || '').toLowerCase().includes(filterStudent.toLowerCase()));
       if (matched.length > 0) {
         const expanded: Record<string, boolean> = {};
-        matched.forEach(q => {
+        matched.forEach((q: any) => {
           expanded[q.id] = true;
         });
         setExpandedIds(expanded);
@@ -69,25 +144,50 @@ export default function QAPortal() {
     callback(base64s);
   };
 
-  const handleAskQuestion = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newQuestion.trim() && newQuestionImages.length === 0) return;
+  const createMutation = useMutation({
+    mutationFn: (data: { courseId: string; question: string; imageUrls?: string[] }) => qaService.createQAThread(data),
+    onSuccess: (newEntry) => {
+      queryClient.invalidateQueries({ queryKey: ['qaThreads'] });
+      questionForm.reset();
+      setNewQuestionImages([]);
+      setExpandedIds(prev => ({ ...prev, [newEntry.id]: true }));
+    }
+  });
 
-    const newEntry: MentorshipQA = {
-      id: `qa-${Date.now()}`,
-      studentName: user?.name || "Student",
-      courseId: "course-fullstack", // Mock
-      question: newQuestion,
-      imageUrls: newQuestionImages.length > 0 ? newQuestionImages : undefined,
-      replies: [],
-      status: "pending",
-      date: new Date().toISOString().split("T")[0]
-    };
+  const statusMutation = useMutation({
+    mutationFn: (data: { threadId: string; status: 'pending' | 'answered' }) => qaService.updateStatus(data.threadId, data.status),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['qaThreads'] })
+  });
 
-    setQaList([newEntry, ...qaList]);
-    setNewQuestion("");
-    setNewQuestionImages([]);
-    setExpandedIds(prev => ({ ...prev, [newEntry.id]: true })); // Auto-open new questions
+  const replyMutation = useMutation({
+    mutationFn: (data: { threadId: string; content: string; imageUrls?: string[] }) => qaService.addReply(data.threadId, { content: data.content, imageUrls: data.imageUrls }),
+    onSuccess: (newReply, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['qaThreads'] });
+      setReplyText(prev => ({ ...prev, [variables.threadId]: "" }));
+      setReplyImages(prev => ({ ...prev, [variables.threadId]: [] }));
+
+      if (user?.role === 'mentor' || user?.role === 'admin') {
+        statusMutation.mutate({ threadId: variables.threadId, status: 'answered' });
+      }
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (threadId: string) => qaService.deleteQAThread(threadId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['qaThreads'] });
+    },
+    onError: (err: any) => {
+      alert(err?.response?.data?.message || "Failed to delete discussion thread.");
+    }
+  });
+
+  const handleAskQuestion = (data: QuestionValues) => {
+    createMutation.mutate({
+      courseId: user?.enrolledCourseIds?.[0] || "course-fullstack", // Should ideally be selected by user
+      question: data.question,
+      imageUrls: newQuestionImages.length > 0 ? newQuestionImages : undefined
+    });
   };
 
   const handleReply = (qaId: string) => {
@@ -95,46 +195,74 @@ export default function QAPortal() {
     const replyImgs = replyImages[qaId];
     if ((!replyContent.trim() && (!replyImgs || replyImgs.length === 0)) || !user) return;
 
-    const timestamp = new Date().toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-
-    const newReply: QAReply = {
-      id: `rep-${Date.now()}`,
-      authorName: user.name,
-      authorRole: user.role as "student" | "mentor" | "admin",
+    replyMutation.mutate({
+      threadId: qaId,
       content: replyContent,
-      imageUrls: replyImgs && replyImgs.length > 0 ? replyImgs : undefined,
-      date: timestamp
-    };
-
-    setQaList(prevList =>
-      prevList.map(qa => {
-        if (qa.id === qaId) {
-          // Normalize old data structure if needed
-          const existingReplies = qa.replies || [];
-          return {
-            ...qa,
-            replies: [...existingReplies, newReply],
-            status: user.role === 'mentor' ? "answered" : qa.status
-          };
-        }
-        return qa;
-      })
-    );
-
-    // Clear reply box and images
-    setReplyText(prev => ({ ...prev, [qaId]: "" }));
-    setReplyImages(prev => ({ ...prev, [qaId]: [] }));
+      imageUrls: replyImgs && replyImgs.length > 0 ? replyImgs : undefined
+    });
   };
 
-  const roleFilteredQaList = qaList.filter(q => {
-    if (user?.role === "student") {
-      return q.studentName.toLowerCase() === user.name.toLowerCase();
+  const roleFilteredQaList = useMemo(() => {
+    if (user?.role === 'student') {
+      return qaList.filter((q: any) => q.studentId === user.id || q.student?.id === user.id);
     }
-    if (user?.role === "mentor") {
-      return user.assignedCourseIds?.includes(q.courseId);
+    return qaList;
+  }, [qaList, user]);
+
+  const filteredDiscussions = useMemo(() => {
+    return roleFilteredQaList.filter((q: any) => !filterStudent || (q.student?.name || q.studentName || '').toLowerCase().includes(filterStudent.toLowerCase()));
+  }, [roleFilteredQaList, filterStudent]);
+
+  const displayedDiscussions = useMemo(() => {
+    return filteredDiscussions.slice(0, visibleDiscussionsCount);
+  }, [filteredDiscussions, visibleDiscussionsCount]);
+
+  const hasMoreDiscussions = filteredDiscussions.length > visibleDiscussionsCount;
+
+  const handleShowMoreDiscussions = () => {
+    if (hasMoreDiscussions) {
+      setVisibleDiscussionsCount(prev => prev + 5);
+    } else if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+      setVisibleDiscussionsCount(prev => prev + 5);
     }
-    return true; // Admin sees all
-  });
+  };
+
+  const isPremiumUser = user?.role !== 'student' || user?.plan === 'premium' || user?.plan === 'elite';
+
+  if (!isPremiumUser) {
+    return (
+      <div className="w-full pb-12 ">
+        <div className="mb-8">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-white mb-6">Mentorship Q&A</h1>
+          <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400">
+            Ask questions and get direct answers from your elite mentors.
+          </p>
+        </div>
+
+        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden relative shadow-2xl min-h-[400px] flex items-center justify-center">
+          <div className="text-center p-6 max-w-md relative z-20">
+            <div className="w-16 h-16 bg-zinc-950 rounded-full flex items-center justify-center mx-auto mb-4 border border-zinc-800 shadow-lg">
+              <Lock className="w-8 h-8 text-cyan-500" />
+            </div>
+            <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">Mentorship Access Locked</h3>
+            <p className="text-sm text-zinc-400 mb-6">The Mentorship Q&A portal is an exclusive feature. Upgrade to Premium or Elite to get direct answers from top tech mentors.</p>
+            <button className="px-6 py-3 bg-cyan-400 hover:bg-cyan-500 text-zinc-950 font-bold rounded-lg transition-colors shadow-[0_0_15px_rgba(8,145,178,0.3)]">
+              Upgrade Plan
+            </button>
+          </div>
+
+          {/* Blurred Background effect representing Q&A feed */}
+          <div className="absolute inset-0 pointer-events-none z-10 flex flex-col items-center justify-center p-8 gap-4 opacity-30 select-none" aria-hidden="true">
+            <div className="w-full max-w-3xl h-32 bg-zinc-800 rounded-xl blur-[2px]"></div>
+            <div className="w-full max-w-3xl h-48 bg-zinc-800 rounded-xl blur-[2px]"></div>
+            <div className="w-full max-w-3xl h-24 bg-zinc-800 rounded-xl blur-[2px]"></div>
+          </div>
+          <div className="absolute inset-0 bg-zinc-900/40 backdrop-blur-sm z-10"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full pb-12 ">
@@ -151,7 +279,7 @@ export default function QAPortal() {
             <MessageSquarePlus className="w-4 h-4 mr-2 text-cyan-400" />
             Ask a new question
           </h2>
-          <form onSubmit={handleAskQuestion}>
+          <form onSubmit={questionForm.handleSubmit(handleAskQuestion)}>
             {newQuestionImages.length > 0 && (
               <div className="mb-4 flex flex-wrap gap-3">
                 {newQuestionImages.map((img, idx) => (
@@ -169,13 +297,13 @@ export default function QAPortal() {
               </div>
             )}
             <textarea
-              value={newQuestion}
-              onChange={(e) => setNewQuestion(e.target.value)}
+              {...questionForm.register("question")}
               placeholder="Describe your doubt in detail. Mention the topic or code snippet if relevant..."
-              className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-xs sm:text-[13px] lg:text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all custom-scrollbar min-h-[120px] sm:min-h-[150px] leading-relaxed"
+              className={`w-full px-4 py-2.5 bg-zinc-950 border rounded-lg text-xs sm:text-[13px] lg:text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-1 transition-all custom-scrollbar min-h-[120px] sm:min-h-[150px] leading-relaxed ${questionForm.formState.errors.question ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-zinc-800 focus:border-cyan-500 focus:ring-cyan-500'}`}
             />
+            {questionForm.formState.errors.question && <p className="text-xs text-red-500 mt-1">{questionForm.formState.errors.question.message}</p>}
             <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center mt-3 pt-3 gap-3 sm:gap-0">
-              <label className="w-full sm:w-auto cursor-pointer px-4 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 hover:text-cyan-400 hover:bg-cyan-400/30 transition-all flex items-center justify-center sm:justify-start gap-2 text-xs sm:text-[13px] lg:text-sm font-medium" title="Attach screenshots">
+              <label className="w-full sm:w-auto cursor-pointer px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 text-zinc-700 dark:text-zinc-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-100/50 dark:hover:bg-cyan-400/20 transition-all flex items-center justify-center sm:justify-start gap-2 text-xs sm:text-[13px] lg:text-sm font-medium" title="Attach screenshots">
                 <ImageIcon className="w-4 h-4" />
                 <span>Attach Images</span>
                 <input
@@ -188,7 +316,7 @@ export default function QAPortal() {
               </label>
               <button
                 type="submit"
-                disabled={!newQuestion.trim() && newQuestionImages.length === 0}
+                disabled={!questionForm.watch("question")?.trim() && newQuestionImages.length === 0}
                 className="w-full sm:w-auto px-6 py-2 text-xs sm:text-[13px] lg:text-sm font-semibold rounded-lg bg-cyan-400 text-zinc-950 hover:bg-cyan-500 transition-colors inline-flex justify-center items-center disabled:opacity-50 cursor-pointer"
               >
                 <Send className="w-4 h-4 mr-2" />
@@ -205,7 +333,7 @@ export default function QAPortal() {
           {filterStudent && (
             <div className="flex items-center gap-2 px-3 py-1 bg-cyan-950/50 border border-cyan-800/30 text-cyan-400 rounded-full text-xs sm:text-[13px] font-medium shrink-0 animate-in fade-in zoom-in-95">
               <span>Mentee: <span className="font-semibold text-white">{filterStudent}</span></span>
-              <button 
+              <button
                 onClick={() => {
                   setFilterStudent(null);
                   if (typeof window !== "undefined") {
@@ -222,8 +350,8 @@ export default function QAPortal() {
           )}
         </div>
 
-        {roleFilteredQaList.filter(q => !filterStudent || q.studentName.toLowerCase().includes(filterStudent.toLowerCase())).map((qa) => {
-          const course = mockCourses.find(c => c.id === qa.courseId);
+        {displayedDiscussions.map((qa: any) => {
+          const course = qa.course || mockCourses.find(c => c.id === qa.courseId);
 
           return (
             <div key={qa.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden transition-all duration-200">
@@ -238,37 +366,80 @@ export default function QAPortal() {
                     </div>
                     <div className="flex-1">
                       <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2 sm:mb-1">
-                        <span className="text-sm sm:text-base lg:text-lg font-semibold text-white">{qa.studentName}</span>
+                        <span className="text-sm sm:text-base lg:text-lg font-semibold text-white">{qa.student?.name || 'Unknown Student'}</span>
+                        {/* Status Badge */}
+                        {qa.status === 'pending' && (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-semibold tracking-wide bg-amber-500/10 text-amber-500 border border-amber-500/25 whitespace-nowrap shadow-sm">
+                            <span className="relative flex h-1.5 w-1.5 shrink-0">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
+                            </span>
+                            <span>Unresolved</span>
+                          </span>
+                        )}
                         {course && (
                           <span className="flex items-center text-[10px] sm:text-[11px] lg:text-xs font-bold uppercase tracking-wider text-cyan-700 dark:text-cyan-400 bg-cyan-400/15 px-2 py-0.5 rounded whitespace-nowrap">
                             <BookOpen className="w-3 h-3 mr-1 shrink-0 text-cyan-700 dark:text-cyan-400" />
                             <span className="truncate max-w-[150px] sm:max-w-none">{course.title}</span>
                           </span>
                         )}
-                        <span className="text-[10px] sm:text-[11px] lg:text-xs text-zinc-500">• {qa.date}</span>
-                        {!expandedIds[qa.id] && qa.replies.length > 0 && (
+                        <span className="text-[10px] sm:text-[11px] lg:text-xs text-zinc-500">• {formatQADateTime(qa.createdAt || qa.date || Date.now())}</span>
+                        {!expandedIds[qa.id] && qa.replies && qa.replies.length > 0 && (
                           <span className="text-[10px] sm:text-[11px] lg:text-xs font-bold text-zinc-400 bg-zinc-800 px-2 py-0.5 rounded">
                             {qa.replies.length} {qa.replies.length === 1 ? 'Reply' : 'Replies'}
                           </span>
                         )}
                       </div>
-                      <p className={`text-xs sm:text-[13px] lg:text-sm leading-relaxed text-zinc-300 ${!expandedIds[qa.id] ? 'line-clamp-2' : ''}`}>{qa.question}</p>
-                      {qa.imageUrls && qa.imageUrls.length > 0 && (
-                        <div className={`mt-3 flex flex-wrap gap-2 ${!expandedIds[qa.id] ? 'hidden' : ''}`}>
-                          {qa.imageUrls.map((img, idx) => (
-                            <img
-                              key={idx}
-                              src={img}
-                              alt={`Attached screenshot ${idx + 1}`}
-                              className="h-20 w-20 rounded-lg border border-zinc-800 object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => setSelectedImage(img)}
-                            />
-                          ))}
-                        </div>
+                      
+                      {/* Only show message preview when accordion is collapsed */}
+                      {!expandedIds[qa.id] && (
+                        <>
+                          <p className="text-xs sm:text-[13px] lg:text-sm leading-relaxed text-zinc-350 line-clamp-2 mt-1">
+                            {qa.replies && qa.replies.length > 0 ? (
+                              <span>
+                                {(() => {
+                                  const sorted = [...qa.replies].sort((a: any, b: any) =>
+                                    new Date(b.createdAt || b.date || 0).getTime() - new Date(a.createdAt || a.date || 0).getTime()
+                                  );
+                                  return `${sorted[0].author?.name || 'User'}: ${sorted[0].content}`;
+                                })()}
+                              </span>
+                            ) : (
+                              qa.question
+                            )}
+                          </p>
+                          {qa.imageUrls && qa.imageUrls.length > 0 && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {qa.imageUrls.map((img: string, idx: number) => (
+                                <img
+                                  key={idx}
+                                  src={img}
+                                  alt={`Attached screenshot ${idx + 1}`}
+                                  className="h-20 w-20 rounded-lg border border-zinc-800 object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={() => setSelectedImage(img)}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </div>
-                  <div className="flex-shrink-0 pt-2 text-zinc-500">
+                  <div className="flex-shrink-0 pt-1 text-zinc-500 flex items-center gap-2">
+                    {(user?.role === 'admin' || user?.role === 'mentor') && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm("Are you sure you want to delete this discussion thread?")) {
+                            deleteMutation.mutate(qa.id);
+                          }
+                        }}
+                        className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-zinc-850/80 rounded transition-colors cursor-pointer"
+                        title="Delete Discussion"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                     <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${expandedIds[qa.id] ? 'rotate-180' : ''}`} />
                   </div>
                 </div>
@@ -281,47 +452,109 @@ export default function QAPortal() {
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
                     transition={{ duration: 0.3, ease: "easeInOut" }}
-                    className="overflow-hidden"
+                    className="overflow-hidden flex flex-col"
                   >
-                    {/* Threaded Replies */}
-                    {(qa.replies || []).map((reply, index) => {
-                      const isMentor = reply.authorRole === 'mentor' || reply.authorRole === 'admin';
-                      return (
-                        <div key={reply.id} className="bg-zinc-950  p-4 sm:p-6">
-                          <div className="flex items-start gap-3 sm:gap-4">
-                            <div className={`flex-shrink-0 ${isMentor ? 'text-cyan-500' : 'text-zinc-500'}`}>
-                              {isMentor ? <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8" /> : <UserCircle2 className="w-6 h-6 sm:w-8 sm:h-8" />}
-                            </div>
-                            <div className="flex-1">
-                              <div className="flex items-center flex-wrap gap-2 mb-2 sm:mb-1">
-                                <span className={`text-xs sm:text-[13px] lg:text-sm font-semibold ${isMentor ? 'text-cyan-400' : 'text-zinc-300'}`}>
-                                  {reply.authorName}
-                                </span>
-                                {isMentor && <CheckCircle2 className="w-4 h-4 text-cyan-500" />}
-                                <span className="text-[10px] sm:text-[11px] lg:text-xs text-zinc-500">• {reply.date}</span>
-                              </div>
-                              <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400 whitespace-pre-wrap leading-relaxed">{reply.content}</p>
-                              {reply.imageUrls && reply.imageUrls.length > 0 && (
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                  {reply.imageUrls.map((img, idx) => (
-                                    <img
-                                      key={idx}
-                                      src={img}
-                                      alt={`Attached screenshot ${idx + 1}`}
-                                      className="h-20 w-20 rounded-lg border border-zinc-800 object-cover cursor-pointer hover:opacity-80 transition-opacity"
-                                      onClick={() => setSelectedImage(img)}
-                                    />
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
+                    {(() => {
+                      const allMessages = [
+                        {
+                          id: 'question-' + qa.id,
+                          content: qa.question,
+                          createdAt: qa.createdAt || qa.date || Date.now(),
+                          imageUrls: qa.imageUrls,
+                          author: qa.student,
+                          authorRole: 'student',
+                          authorName: qa.student?.name || 'Unknown Student',
+                          isQuestion: true
+                        },
+                        ...(qa.replies || []).map((r: any) => ({
+                          id: r.id,
+                          content: r.content,
+                          createdAt: r.createdAt || r.date || Date.now(),
+                          imageUrls: r.imageUrls,
+                          author: r.author,
+                          authorRole: r.author?.role?.toLowerCase() || r.authorRole,
+                          authorName: r.author?.name || r.authorName,
+                          isQuestion: false
+                        }))
+                      ].sort((a: any, b: any) =>
+                        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
                       );
-                    })}
 
-                    {/* Reply Input Box (Available to both Mentor and Student) */}
-                    <div className="bg-zinc-950 p-4 sm:p-6 ">
+                      const showLimit = visibleRepliesCount[qa.id] || 3;
+                      const startIndex = Math.max(0, allMessages.length - showLimit);
+                      const displayedMessages = allMessages.slice(startIndex);
+                      const hasMoreMessages = allMessages.length > showLimit;
+
+                      return (
+                        <>
+                          {/* Toggle for Older Replies (rendered at the top of replies) */}
+                          {(hasMoreMessages || showLimit > 3) && (
+                            <div className="py-4 px-6 flex items-center gap-4 border-b border-zinc-200 dark:border-zinc-900/50 bg-transparent">
+                              <div className="h-px bg-zinc-200 dark:bg-zinc-800/60 flex-1" />
+                              {hasMoreMessages ? (
+                                <button
+                                  onClick={() => setVisibleRepliesCount(prev => ({ ...prev, [qa.id]: showLimit + 5 }))}
+                                  className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-50 dark:bg-cyan-955/40 border border-cyan-200 dark:border-cyan-800/40 cursor-pointer shadow-sm"
+                                >
+                                  <span>View {allMessages.length - showLimit} older replies</span>
+                                  <ChevronDown className="w-3.5 h-3.5" />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => setVisibleRepliesCount(prev => ({ ...prev, [qa.id]: 3 }))}
+                                  className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 hover:text-cyan-700 dark:hover:text-cyan-300 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-50 dark:bg-cyan-955/40 border border-cyan-200 dark:border-cyan-800/40 cursor-pointer shadow-sm"
+                                >
+                                  <span>Collapse replies</span>
+                                  <ChevronDown className="w-3.5 h-3.5 rotate-180" />
+                                </button>
+                              )}
+                              <div className="h-px bg-zinc-200 dark:bg-zinc-800/60 flex-1" />
+                            </div>
+                          )}
+
+                          {/* Chronological Message Flow (Original Question + Replies) */}
+                          {displayedMessages.map((msg: any) => {
+                            const isMentor = msg.authorRole === 'mentor' || msg.authorRole === 'admin';
+                            const isQuestion = msg.isQuestion;
+                            return (
+                              <div key={msg.id} className="bg-zinc-950 p-4 sm:p-6 border-b border-zinc-900/50">
+                                <div className="flex items-start gap-3 sm:gap-4">
+                                  <div className={`flex-shrink-0 ${isMentor ? 'text-cyan-500' : 'text-zinc-500'}`}>
+                                    {isMentor ? <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8" /> : <UserCircle2 className="w-6 h-6 sm:w-8 sm:h-8" />}
+                                  </div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center flex-wrap gap-2 mb-2 sm:mb-1">
+                                      <span className={`text-xs sm:text-[13px] lg:text-sm font-semibold ${isQuestion ? 'text-cyan-400' : isMentor ? 'text-cyan-400' : 'text-zinc-300'}`}>
+                                        {msg.authorName}
+                                      </span>
+                                      {isMentor && <CheckCircle2 className="w-4 h-4 text-cyan-500" />}
+                                      <span className="text-[10px] sm:text-[11px] lg:text-xs text-zinc-500">• {formatQADateTime(msg.createdAt)}</span>
+                                    </div>
+                                    <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                                    {msg.imageUrls && msg.imageUrls.length > 0 && (
+                                      <div className="mt-3 flex flex-wrap gap-2">
+                                        {msg.imageUrls.map((img: string, idx: number) => (
+                                          <img
+                                            key={idx}
+                                            src={img}
+                                            alt={`Attached screenshot ${idx + 1}`}
+                                            className="h-20 w-20 rounded-lg border border-zinc-800 object-cover cursor-pointer hover:opacity-80 transition-opacity"
+                                            onClick={() => setSelectedImage(img)}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </>
+                      );
+                    })()}
+
+                    {/* Reply Input Box (Positioned at the very bottom of the conversation thread) */}
+                    <div className="bg-zinc-950 p-4 sm:p-6 border-t border-zinc-900/50">
                       <div className="flex items-start gap-3 sm:gap-4">
                         <div className="flex-shrink-0">
                           {user?.role === 'mentor' ? <ShieldCheck className="w-6 h-6 sm:w-8 sm:h-8 text-zinc-500 mt-1" /> : <UserCircle2 className="w-6 h-6 sm:w-8 sm:h-8 text-zinc-500 mt-1" />}
@@ -358,7 +591,7 @@ export default function QAPortal() {
                             ) : <div className="hidden sm:block"></div>}
 
                             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
-                              <label className="w-full sm:w-auto cursor-pointer px-4 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/50 text-zinc-300 hover:text-cyan-400 hover:bg-cyan-400/30 transition-all flex items-center justify-center sm:justify-start gap-2 text-xs sm:text-[13px] lg:text-sm font-medium" title="Attach screenshots">
+                              <label className="w-full sm:w-auto cursor-pointer px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700/50 text-zinc-700 dark:text-zinc-300 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-cyan-100/50 dark:hover:bg-cyan-400/20 transition-all flex items-center justify-center sm:justify-start gap-2 text-xs sm:text-[13px] lg:text-sm font-medium" title="Attach screenshots">
                                 <ImageIcon className="w-4 h-4" />
                                 <span>Attach Images</span>
                                 <input
@@ -388,6 +621,50 @@ export default function QAPortal() {
           );
         })}
       </div>
+
+      {/* Intersection Observer target for infinite scrolling optimization */}
+      <div ref={observerTarget} className="h-10 w-full flex items-center justify-center mt-6">
+        {isFetchingNextPage && (
+          <div className="flex items-center gap-2 text-zinc-400 text-xs sm:text-sm">
+            <div className="w-4 h-4 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+            <span>Loading older discussions...</span>
+          </div>
+        )}
+        {!hasNextPage && qaList.length > 0 && (
+          <span className="text-zinc-500 text-xs sm:text-sm">All doubts loaded.</span>
+        )}
+      </div>
+
+      {/* Discussions List Pagination Controls (Show more / Show less) */}
+      {(hasMoreDiscussions || hasNextPage || visibleDiscussionsCount > 3) && (
+        <div className="py-6 flex items-center justify-center gap-6 mt-4 border-t border-zinc-800/40">
+          {(hasMoreDiscussions || hasNextPage) && (
+            <button
+              onClick={handleShowMoreDiscussions}
+              disabled={isFetchingNextPage}
+              className="text-xs sm:text-sm font-semibold text-cyan-400 hover:text-cyan-300 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5 px-4 py-2 rounded-full bg-cyan-950/40 border border-cyan-800/40 cursor-pointer shadow-md disabled:opacity-55"
+            >
+              {isFetchingNextPage ? (
+                <span>Loading older discussions...</span>
+              ) : (
+                <>
+                  <span>Show more discussions {hasMoreDiscussions ? `(${filteredDiscussions.length - visibleDiscussionsCount} remaining)` : ''}</span>
+                  <ChevronDown className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          )}
+          {visibleDiscussionsCount > 3 && (
+            <button
+              onClick={() => setVisibleDiscussionsCount(3)}
+              className="text-xs sm:text-sm font-semibold text-zinc-400 hover:text-zinc-350 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-1.5 px-4 py-2 rounded-full bg-zinc-900/40 border border-zinc-800/60 cursor-pointer shadow-md"
+            >
+              <span>Show less</span>
+              <ChevronDown className="w-4 h-4 rotate-180" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Lightbox Modal */}
       <AnimatePresence>

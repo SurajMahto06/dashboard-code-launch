@@ -1,31 +1,43 @@
 "use client";
 
 import { use, useState } from "react";
-import { mockCourses, mockModules, mockTopics } from "@/data/mock-dashboard";
+
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, ChevronDown, ChevronUp, PlayCircle, Lock } from "lucide-react";
+import { ArrowLeft, BookOpen, ChevronDown, ChevronUp, PlayCircle, Lock, Loader2, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/components/dashboard/auth-provider";
+import { useQuery } from "@tanstack/react-query";
+import { coursesService } from "@/services/courses";
 
 export default function CourseSyllabusPage({ params }: { params: Promise<{ courseId: string }> }) {
   const resolvedParams = use(params);
   const { user } = useAuth();
 
-  const course = mockCourses.find((c) => c.id === resolvedParams.courseId);
+  const { data: course, isLoading } = useQuery({
+    queryKey: ['courses', resolvedParams.courseId],
+    queryFn: () => coursesService.getCourseById(resolvedParams.courseId),
+    enabled: !!resolvedParams.courseId,
+  });
+
+  // Initialize all modules as expanded by default for easy viewing
+  const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>({});
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh]">
+        <Loader2 className="w-8 h-8 text-cyan-500 animate-spin mb-4" />
+        <p className="text-zinc-400">Loading course syllabus...</p>
+      </div>
+    );
+  }
+
   if (!course) {
     notFound();
   }
 
   const isEnrolled = user?.role === "admin" || user?.enrolledCourseIds?.includes(course.id);
-  const courseModules = mockModules.filter(m => m.courseId === course.id).sort((a, b) => a.order - b.order);
-  const courseTopics = mockTopics.filter(t => t.courseId === course.id);
-
-  // Initialize all modules as expanded by default for easy viewing
-  const [expandedModules, setExpandedModules] = useState<Record<string, boolean>>(() => {
-    const initial: Record<string, boolean> = {};
-    courseModules.forEach(m => initial[m.id] = true);
-    return initial;
-  });
+  const courseModules = course.modules || [];
+  const courseTopics = courseModules.flatMap((m: any) => m.topics || []);
 
   const toggleModule = (moduleId: string) => {
     setExpandedModules(prev => ({ ...prev, [moduleId]: !prev[moduleId] }));
@@ -62,8 +74,8 @@ export default function CourseSyllabusPage({ params }: { params: Promise<{ cours
       <div className="space-y-4">
         <h2 className="text-base sm:text-lg lg:text-xl font-bold text-white mb-6">Course Syllabus</h2>
 
-        {courseModules.length > 0 ? courseModules.map((module, mIdx) => {
-          const moduleTopics = courseTopics.filter(t => t.moduleId === module.id);
+        {courseModules.length > 0 ? courseModules.map((module: any, mIdx: number) => {
+          const moduleTopics = module.topics || [];
           const isExpanded = expandedModules[module.id];
 
           return (
@@ -86,7 +98,10 @@ export default function CourseSyllabusPage({ params }: { params: Promise<{ cours
 
               {isExpanded && (
                 <div className="divide-y divide-zinc-800 ">
-                  {moduleTopics.length > 0 ? moduleTopics.map((topic, tIdx) => (
+                  {moduleTopics.length > 0 ? moduleTopics.map((topic: any, tIdx: number) => {
+                    const isCompleted = user?.completedTopicIds?.includes(topic.id);
+                    const isInProgress = user?.inProgressTopicIds?.includes(topic.id);
+                    return (
                     <div key={topic.id} className="group relative">
                       <div className="p-4 sm:p-5 flex items-center justify-between hover:bg-zinc-800/30 transition-colors">
                         <div className="flex items-start gap-4">
@@ -94,12 +109,13 @@ export default function CourseSyllabusPage({ params }: { params: Promise<{ cours
                             {tIdx + 1}
                           </div>
                           <div>
-                            <h4 className={`text-sm sm:text-base lg:text-lg font-semibold ${isEnrolled ? 'text-white group-hover:text-cyan-400' : 'text-zinc-300'} transition-colors`}>
+                            <h4 className={`text-sm sm:text-base lg:text-lg font-semibold flex items-center ${isEnrolled ? 'text-white group-hover:text-cyan-400' : 'text-zinc-300'} transition-colors`}>
                               {topic.title}
+                              {isCompleted && <CheckCircle2 className="w-4 h-4 ml-2 text-green-500" />}
                             </h4>
                             <div className="flex items-center gap-3 mt-1.5 text-[10px] sm:text-[11px] lg:text-xs text-zinc-500">
-                              <span className="flex items-center"><PlayCircle className="w-3.5 h-3.5 mr-1" /> {topic.video.duration}</span>
-                              {topic.mcqs.length > 0 && <span>• {topic.mcqs.length} MCQs</span>}
+                              {topic.video && <span className="flex items-center"><PlayCircle className="w-3.5 h-3.5 mr-1" /> {topic.video?.duration || "Video"}</span>}
+                              {topic.mcqs?.length > 0 && <span>• {topic.mcqs.length} MCQs</span>}
                             </div>
                           </div>
                         </div>
@@ -109,14 +125,16 @@ export default function CourseSyllabusPage({ params }: { params: Promise<{ cours
                             href={`/topic/${topic.id}`}
                             className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-[13px] font-medium rounded-lg transition-colors absolute inset-0 sm:static sm:inset-auto opacity-0 sm:opacity-100 group-hover:opacity-100 flex items-center justify-center sm:justify-end"
                           >
-                            <span className="hidden sm:inline">Start Learning</span>
+                            <span className="hidden sm:inline">
+                              {isCompleted ? "Review Topic" : isInProgress ? "Resume Learning" : "Start Learning"}
+                            </span>
                           </Link>
                         ) : (
                           <Lock className="w-5 h-5 text-zinc-600" />
                         )}
                       </div>
                     </div>
-                  )) : (
+                  )}) : (
                     <div className="p-4 sm:p-6 text-center text-zinc-500 text-[13px] italic">
                       No topics have been added to this module yet.
                     </div>

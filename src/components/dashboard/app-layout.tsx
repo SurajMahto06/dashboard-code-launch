@@ -5,10 +5,12 @@ import { Bell, Menu } from "lucide-react";
 import { useAuth } from "./auth-provider";
 import { DashboardSidebar } from "./sidebar";
 import { NotificationMenu } from "./notification-menu";
-import { AppNotification, mockNotifications } from "@/data/mock-dashboard";
+import { useQuery } from "@tanstack/react-query";
+import { notificationService } from "@/services/notifications";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ThemeToggle } from "./theme-toggle";
+import { PATHS } from "@/config/routes";
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -16,27 +18,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false);
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
 
-  // Check for unread notifications
-  useEffect(() => {
-    if (!user) return;
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['notifications', 'dropdown', user?.id],
+    queryFn: () => notificationService.getNotifications(true),
+    enabled: !!user,
+  });
 
-    const checkUnread = () => {
-      const saved = localStorage.getItem("mockNotifications");
-      const all: AppNotification[] = saved ? JSON.parse(saved) : mockNotifications;
-      const unread = all.some(n =>
-        !n.isRead && (n.userId === user.id || (n.userId === "all" && n.targetRole === user.role))
-      );
-      setHasUnreadNotifications(unread);
-    };
-
-    checkUnread();
-
-    // Set up an interval to check for cross-tab updates or just poll
-    const interval = setInterval(checkUnread, 5000);
-    return () => clearInterval(interval);
-  }, [user, isNotificationMenuOpen]); // Also re-check when menu closes
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
 
   useEffect(() => {
@@ -44,15 +33,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
-    if (!user && pathname !== "/login") {
-      router.push("/login");
-    } else if (user && pathname === "/login") {
-      router.push("/");
+    if (!user && pathname !== PATHS.LOGIN) {
+      router.push(PATHS.LOGIN);
+    } else if (user && pathname === PATHS.LOGIN) {
+      router.push(PATHS.DASHBOARD);
     }
   }, [user, pathname, router]);
 
   // If on login page, just render the content without sidebar
-  if (pathname === "/login") {
+  if (pathname === PATHS.LOGIN) {
     return (
       <main className="flex-1 overflow-y-auto bg-zinc-950">
         {children}
@@ -84,12 +73,16 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <ThemeToggle />
             <div className="relative">
               <button
+                id="notification-bell-btn"
                 onClick={() => setIsNotificationMenuOpen(!isNotificationMenuOpen)}
+                onMouseDown={(e) => e.stopPropagation()}
                 className={`cursor-pointer text-zinc-400 hover:text-cyan-400 transition-colors relative ${isNotificationMenuOpen ? 'text-cyan-400' : ''}`}
               >
                 <Bell className="w-5 h-5" />
-                {hasUnreadNotifications && (
-                  <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-zinc-950"></span>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-[9px] font-bold text-white min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center border border-zinc-950 shadow-sm animate-pulse">
+                    {unreadCount}
+                  </span>
                 )}
               </button>
 
@@ -101,7 +94,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
             <div className="h-6 w-px bg-zinc-800"></div>
 
-            <Link href="/profile" className="relative group shrink-0">
+            <Link href={PATHS.PROFILE} className="relative group shrink-0">
               {user.avatarUrl ? (
                 <img
                   src={user.avatarUrl}

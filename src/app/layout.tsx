@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProvider } from "@/components/dashboard/auth-provider";
 import { AppLayout } from "@/components/dashboard/app-layout";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ReactQueryProvider } from "@/lib/query-provider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const roboto = Roboto({
@@ -31,11 +32,13 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>
-            <AppLayout>
-              {children}
-            </AppLayout>
-          </AuthProvider>
+          <ReactQueryProvider>
+            <AuthProvider>
+              <AppLayout>
+                {children}
+              </AppLayout>
+            </AuthProvider>
+          </ReactQueryProvider>
         </ThemeProvider>
       </body>
     </html>

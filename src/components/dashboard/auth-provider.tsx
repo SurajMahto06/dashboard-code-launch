@@ -1,7 +1,10 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode } from "react";
-import { User, Role } from "@/data/mock-dashboard";
+import React, { createContext, useContext, ReactNode, useEffect, useState } from "react";
+import { User, Role } from "@/types";
+import { authService } from "@/services/auth";
+import { Loader2 } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface AuthContextType {
   user: User | null;
@@ -13,23 +16,46 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  // Start with null user to force login
-  const [user, setUser] = useState<User | null>(null);
+  const queryClient = useQueryClient();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const { data: user, isLoading } = useQuery({
+    queryKey: ['auth-user'],
+    queryFn: async () => {
+      const currentUser = await authService.getMe();
+      return currentUser;
+    },
+    staleTime: Infinity, // Don't auto-refetch the user profile unless explicitly invalidated
+  });
 
   const login = (userData: User) => {
-    setUser(userData);
+    queryClient.setQueryData(['auth-user'], userData);
   };
 
   const logout = () => {
-    setUser(null);
+    authService.logout();
+    queryClient.setQueryData(['auth-user'], null);
+    queryClient.clear();
   };
 
   const hasRole = (role: Role) => {
     return user?.role === role;
   };
 
+  if (!mounted || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
+        <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
+      </div>
+    );
+  }
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, hasRole }}>
+    <AuthContext.Provider value={{ user: user || null, login, logout, hasRole }}>
       {children}
     </AuthContext.Provider>
   );

@@ -6,15 +6,18 @@ export interface User {
   name: string;
   role: Role;
   avatarUrl?: string;
-  plan?: "premium" | "elite" | "none";
+  plan?: "premium" | "elite" | "standard" | "none";
   status?: "active" | "inactive" | "pending";
   // Student specific
   enrolledCourseIds?: string[];
   progressPercentage?: number;
   completedTopicIds?: string[];
+  inProgressTopicIds?: string[];
   // Mentor specific
   assignedCourseIds?: string[];
   menteeIds?: string[];
+  mentees?: any[];
+  mentors?: any[];
 }
 
 export interface Video {
@@ -273,9 +276,9 @@ export const mockUsersDB: User[] = [
     email: "student2@elite.com",
     name: "Sarah Designer",
     role: "student",
-    plan: "premium",
-    status: "inactive",
-    enrolledCourseIds: ["course-uiux"],
+    plan: "standard",
+    status: "active",
+    enrolledCourseIds: ["course-fullstack"],
     progressPercentage: 15,
     completedTopicIds: []
   },

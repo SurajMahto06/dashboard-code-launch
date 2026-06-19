@@ -3,13 +3,25 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
 import { FileText, Check, X, ExternalLink, Plus, BookOpen, User as UserIcon, Calendar, Clock, Upload, GitBranch, Download, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
-import { Assignment, mockAssignmentsDB, mockUsersDB, mockCourses } from "@/data/mock-dashboard";
+import { usersService } from "@/services/users";
+import { coursesService } from "@/services/courses";
+import { Assignment } from "@/types";
+import { assignmentsService } from "@/services/assignments";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { Pagination } from "@/components/ui/pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 export default function AssignmentsPage() {
   const { user } = useAuth();
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const queryClient = useQueryClient();
+  const { data: assignments = [], isLoading } = useQuery({
+    queryKey: ['assignments'],
+    queryFn: () => assignmentsService.getAssignments(),
+    enabled: !!user
+  });
+  const [assignmentToDelete, setAssignmentToDelete] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'review' | 'assign'>('review');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -28,14 +40,6 @@ export default function AssignmentsPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
-    if (!user) return;
-    const saved = localStorage.getItem("mockAssignmentsDB");
-    const allAssignments: Assignment[] = saved ? JSON.parse(saved) : mockAssignmentsDB;
-    setAssignments(allAssignments);
-    if (!saved) {
-      localStorage.setItem("mockAssignmentsDB", JSON.stringify(mockAssignmentsDB));
-    }
-
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       const student = params.get('student');
@@ -45,86 +49,93 @@ export default function AssignmentsPage() {
       if (course) setSelectedCourseId(course);
       if (action === 'assign' || student) setActiveTab('assign');
     }
-  }, [user]);
+  }, []);
+
+  // Derived Data — from API
+  const { data: mentorMentees = [] } = useQuery({
+    queryKey: ['myMentees'],
+    queryFn: () => usersService.getMyMentees(),
+    enabled: !!user && user.role !== 'student'
+  });
+
+  const { data: courses = [] } = useQuery({
+    queryKey: ['courses'],
+    queryFn: () => coursesService.getCourses(),
+    enabled: !!user
+  });
 
   if (!user) return null;
 
-  // Derived Data
-  const mentorMentees = mockUsersDB.filter(u => user.menteeIds?.includes(u.id));
-  const courses = mockCourses;
-
   // Filter students based on selected course
   const availableStudents = selectedCourseId
-    ? mentorMentees.filter(m => m.enrolledCourseIds?.includes(selectedCourseId))
+    ? mentorMentees.filter((m: any) => m.enrolledCourseIds?.includes(selectedCourseId))
     : [];
 
-  const saveAssignments = (newAssignments: Assignment[]) => {
-    setAssignments(newAssignments);
-    localStorage.setItem("mockAssignmentsDB", JSON.stringify(newAssignments));
-  };
+
+  const submitMutation = useMutation({
+    mutationFn: (data: { id: string, repoUrl?: string, fileName?: string }) => assignmentsService.submitAssignment(data.id, { repoUrl: data.repoUrl, fileName: data.fileName }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      setSubmittingId(null);
+      setRepoUrl("");
+      setSelectedFile(null);
+    }
+  });
+
+  const assignMutation = useMutation({
+    mutationFn: (data: Partial<Assignment>) => assignmentsService.createAssignment(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      setSelectedStudentId("");
+      setSelectedCourseId("");
+      setAssignmentTitle("");
+      setAssignmentDesc("");
+      setDueDate("");
+      setActiveTab('review');
+    }
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (data: { id: string, status: string }) => assignmentsService.updateAssignment(data.id, { status: data.status as any }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['assignments'] })
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => assignmentsService.deleteAssignment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      setAssignmentToDelete(null);
+    }
+  });
+
 
   // Student Actions
   const handleStudentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!submittingId) return;
-
-    if (!repoUrl || !selectedFile) return; // Require both
-
-    const updated = assignments.map(a =>
-      a.id === submittingId
-        ? {
-          ...a,
-          status: 'submitted' as const,
-          repoUrl: repoUrl,
-          fileName: selectedFile.name,
-          submittedAt: new Date().toISOString()
-        }
-        : a
-    );
-    saveAssignments(updated);
-    setSubmittingId(null);
-    setRepoUrl("");
-    setSelectedFile(null);
+    if (!submittingId || !repoUrl || !selectedFile) return;
+    submitMutation.mutate({ id: submittingId, repoUrl, fileName: selectedFile.name });
   };
 
   // Mentor Actions
   const handleAssign = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStudentId || !selectedCourseId || !assignmentTitle) return;
-
-    const newAssignment: Assignment = {
-      id: `ass-${Date.now()}`,
+    assignMutation.mutate({
       studentId: selectedStudentId,
-      mentorId: user.id,
       courseId: selectedCourseId,
       title: assignmentTitle,
       description: assignmentDesc,
-      status: 'pending_submission',
-      assignedAt: new Date().toISOString(),
-      dueDate: dueDate ? new Date(dueDate).toISOString() : new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(), // Default 7 days
-    };
-
-    saveAssignments([newAssignment, ...assignments]);
-    setSelectedStudentId("");
-    setSelectedCourseId("");
-    setAssignmentTitle("");
-    setAssignmentDesc("");
-    setDueDate("");
-    setActiveTab('review');
+      dueDate: dueDate ? new Date(dueDate).toISOString() : undefined
+    });
   };
 
+
   const handleReview = (id: string, action: 'approved' | 'rejected') => {
-    const updated = assignments.map(a =>
-      a.id === id ? { ...a, status: action } : a
-    );
-    saveAssignments(updated);
+    updateMutation.mutate({ id, status: action });
   };
 
   const handleDelete = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this assignment?")) {
-      const updated = assignments.filter(a => a.id !== id);
-      saveAssignments(updated);
-    }
+    setAssignmentToDelete(id);
   };
 
   const formatTimeAgo = (dateString?: string) => {
@@ -201,7 +212,7 @@ export default function AssignmentsPage() {
                     </div>
 
                     <div className="flex flex-wrap gap-4 text-[10px] sm:text-[11px] lg:text-xs font-medium text-zinc-500">
-                      <span className="flex items-center"><BookOpen className="w-3.5 h-3.5 mr-1" /> {mockCourses.find(c => c.id === assignment.courseId)?.title}</span>
+                      <span className="flex items-center"><BookOpen className="w-3.5 h-3.5 mr-1" /> {assignment.course?.title || 'Unknown Course'}</span>
                       {assignment.dueDate && (
                         <span className="flex items-center text-rose-400/80"><Calendar className="w-3.5 h-3.5 mr-1" /> Due Date: {formatDate(assignment.dueDate)}</span>
                       )}
@@ -444,168 +455,140 @@ export default function AssignmentsPage() {
         </div>
       ) : (
         <>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xl">
-          <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left text-xs sm:text-[13px] lg:text-sm text-zinc-400 min-w-[800px]">
-              <thead className="text-xs text-zinc-500 uppercase bg-zinc-950  whitespace-nowrap">
-                <tr>
-                  <th className="px-6 py-4 whitespace-nowrap w-16">S.No.</th>
-                  <th className="px-6 py-4 whitespace-nowrap">Student</th>
-                  <th className="px-6 py-4 whitespace-nowrap">Assignment Details</th>
-                  <th className="px-6 py-4 whitespace-nowrap">Status</th>
-                  <th className="px-6 py-4 text-right whitespace-nowrap">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-800/50">
-                {paginatedAssignments.length === 0 ? (
+          <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xl">
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left text-xs sm:text-[13px] lg:text-sm text-zinc-400 min-w-[800px]">
+                <thead className="text-xs text-zinc-500 uppercase bg-zinc-950  whitespace-nowrap">
                   <tr>
-                    <td colSpan={5} className="px-6 py-8 text-center text-zinc-500 whitespace-nowrap">
-                      No assignments found. Use the 'New Assignment' tab to create one.
-                    </td>
+                    <th className="px-6 py-4 whitespace-nowrap w-16">S.No.</th>
+                    <th className="px-6 py-4 whitespace-nowrap">Student</th>
+                    <th className="px-6 py-4 whitespace-nowrap">Assignment Details</th>
+                    <th className="px-6 py-4 whitespace-nowrap">Status</th>
+                    <th className="px-6 py-4 text-right whitespace-nowrap">Actions</th>
                   </tr>
-                ) : (
-                paginatedAssignments.map((assignment, index) => {
-                  const studentName = mockUsersDB.find(u => u.id === assignment.studentId)?.name || 'Unknown';
-                  const courseName = mockCourses.find(c => c.id === assignment.courseId)?.title || 'Unknown';
-                  const serialNumber = (currentPage - 1) * itemsPerPage + index + 1;
-
-                  return (
-                    <tr key={assignment.id} className="hover:bg-zinc-800/30 transition-colors">
-                      <td className="px-6 py-5 whitespace-nowrap text-zinc-500 font-medium">
-                        {serialNumber}
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap">
-                        <div className="font-medium text-white flex items-center">
-                          <UserIcon className="w-4 h-4 mr-2 text-zinc-500" />
-                          {studentName}
-                        </div>
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap">
-                        <div className="text-white font-medium mb-1">{assignment.title}</div>
-                        <div className="text-[10px] sm:text-[11px] lg:text-xs text-zinc-500 flex items-center gap-3 mt-1 whitespace-nowrap">
-                          <span className="flex items-center"><BookOpen className="w-3 h-3 mr-1" /> {courseName}</span>
-                          {assignment.dueDate && (
-                            <span className="flex items-center text-rose-400/80"><Calendar className="w-3 h-3 mr-1" /> Due {formatDate(assignment.dueDate)}</span>
-                          )}
-                          <span className="flex items-center"><Clock className="w-3 h-3 mr-1" /> Assigned {formatTimeAgo(assignment.assignedAt)}</span>
-                          {assignment.submittedAt && (
-                            <span className="flex items-center"><Check className="w-3 h-3 mr-1 text-cyan-400/70" /> Submitted {formatTimeAgo(assignment.submittedAt)}</span>
-                          )}
-                        </div>
-
-                        {/* Submission Artifacts Moved Here for Better UX */}
-                        {(assignment.repoUrl || assignment.fileName) && (
-                          <div className="mt-4 flex items-center gap-4 p-3 bg-zinc-950/80 rounded-lg border border-zinc-800/50 w-fit whitespace-nowrap">
-                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Submitted Work:</span>
-                            {assignment.repoUrl && (
-                              <a href={assignment.repoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-cyan-400 hover:text-cyan-300 text-xs font-medium transition-colors">
-                                <GitBranch className="w-3.5 h-3.5 mr-1.5" /> GitHub Repository
-                              </a>
-                            )}
-                            {assignment.fileName && (
-                              <a href="#" className="inline-flex items-center text-cyan-400 hover:text-cyan-300 text-xs font-medium transition-colors">
-                                <Download className="w-3.5 h-3.5 mr-1.5" /> {assignment.fileName}
-                              </a>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap">
-                        {getStatusBadge(assignment.status)}
-                      </td>
-                      <td className="px-6 py-5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-2">
-                          {assignment.status === 'submitted' && (
-                            <>
-                              <div className="w-px h-4 bg-zinc-700 mx-1"></div>
-                              <button
-                                onClick={() => handleReview(assignment.id, 'approved')}
-                                className="text-emerald-500 hover:text-emerald-400 p-1.5 transition-colors bg-emerald-500/10 hover:bg-emerald-500/20 rounded-md border border-emerald-500/20" title="Approve"
-                              >
-                                <Check className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={() => handleReview(assignment.id, 'rejected')}
-                                className="text-rose-500 hover:text-rose-400 p-1.5 transition-colors bg-rose-500/10 hover:bg-rose-500/20 rounded-md border border-rose-500/20" title="Reject / Request Changes"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </>
-                          )}
-
-                          <div className="w-px h-4 bg-zinc-700 mx-1"></div>
-                          <button
-                            onClick={() => handleDelete(assignment.id)}
-                            className="text-zinc-500 hover:text-rose-500 p-1.5 transition-colors hover:bg-rose-500/10 rounded-md"
-                            title="Delete Assignment"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                </thead>
+                <tbody className="divide-y divide-zinc-800/50">
+                  {paginatedAssignments.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-zinc-500 whitespace-nowrap">
+                        No assignments found. Use the 'New Assignment' tab to create one.
                       </td>
                     </tr>
-                  );
-                })
-              )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+                  ) : (
+                    paginatedAssignments.map((assignment, index) => {
+                      const studentName = assignment.student?.name || 'Unknown';
+                      const courseName = assignment.course?.title || 'Unknown';
+                      const serialNumber = (currentPage - 1) * itemsPerPage + index + 1;
 
-        {mentorAssignments.length > 0 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-4">
-            <div className="flex items-center gap-4">
-              <p className="text-xs text-zinc-500">
-                Showing <span className="font-medium text-zinc-300">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium text-zinc-300">{Math.min(currentPage * itemsPerPage, mentorAssignments.length)}</span> of <span className="font-medium text-zinc-300">{mentorAssignments.length}</span> results
-              </p>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-500">Rows per page:</span>
-                <select 
-                  value={itemsPerPage}
-                  onChange={(e) => {
-                    setItemsPerPage(Number(e.target.value));
-                    setCurrentPage(1);
-                  }}
-                  className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-md px-2 py-1 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                </select>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="h-8 border-zinc-800 bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white"
-              >
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                Prev
-              </Button>
-              
-              <span className="text-xs text-zinc-500 px-2 font-medium">
-                Page {currentPage} of {totalPages === 0 ? 1 : totalPages}
-              </span>
+                      return (
+                        <tr key={assignment.id} className="hover:bg-zinc-800/30 transition-colors">
+                          <td className="px-6 py-5 whitespace-nowrap text-zinc-500 font-medium">
+                            {serialNumber}
+                          </td>
+                          <td className="px-6 py-5 whitespace-nowrap">
+                            <div className="font-medium text-white flex items-center">
+                              <UserIcon className="w-4 h-4 mr-2 text-zinc-500" />
+                              {studentName}
+                            </div>
+                          </td>
+                          <td className="px-6 py-5 whitespace-nowrap">
+                            <div className="text-white font-medium mb-1">{assignment.title}</div>
+                            <div className="text-[10px] sm:text-[11px] lg:text-xs text-zinc-500 flex items-center gap-3 mt-1 whitespace-nowrap">
+                              <span className="flex items-center"><BookOpen className="w-3 h-3 mr-1" /> {courseName}</span>
+                              {assignment.dueDate && (
+                                <span className="flex items-center text-rose-400/80"><Calendar className="w-3 h-3 mr-1" /> Due {formatDate(assignment.dueDate)}</span>
+                              )}
+                              <span className="flex items-center"><Clock className="w-3 h-3 mr-1" /> Assigned {formatTimeAgo(assignment.assignedAt)}</span>
+                              {assignment.submittedAt && (
+                                <span className="flex items-center"><Check className="w-3 h-3 mr-1 text-cyan-400/70" /> Submitted {formatTimeAgo(assignment.submittedAt)}</span>
+                              )}
+                            </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage >= totalPages || totalPages === 0}
-                className="h-8 border-zinc-800 bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white"
-              >
-                Next
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
+                            {/* Submission Artifacts Moved Here for Better UX */}
+                            {(assignment.repoUrl || assignment.fileName) && (
+                              <div className="mt-4 flex items-center gap-4 p-3 bg-zinc-950/80 rounded-lg border border-zinc-800/50 w-fit whitespace-nowrap">
+                                <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Submitted Work:</span>
+                                {assignment.repoUrl && (
+                                  <a href={assignment.repoUrl} target="_blank" rel="noreferrer" className="inline-flex items-center text-cyan-400 hover:text-cyan-300 text-xs font-medium transition-colors">
+                                    <GitBranch className="w-3.5 h-3.5 mr-1.5" /> GitHub Repository
+                                  </a>
+                                )}
+                                {assignment.fileName && (
+                                  <a href="#" className="inline-flex items-center text-cyan-400 hover:text-cyan-300 text-xs font-medium transition-colors">
+                                    <Download className="w-3.5 h-3.5 mr-1.5" /> {assignment.fileName}
+                                  </a>
+                                )}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-6 py-5 whitespace-nowrap">
+                            {getStatusBadge(assignment.status)}
+                          </td>
+                          <td className="px-6 py-5 text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-2">
+                              {assignment.status === 'submitted' && (
+                                <>
+                                  <div className="w-px h-4 bg-zinc-700 mx-1"></div>
+                                  <button
+                                    onClick={() => handleReview(assignment.id, 'approved')}
+                                    className="text-emerald-500 hover:text-emerald-400 p-1.5 transition-colors bg-emerald-500/10 hover:bg-emerald-500/20 rounded-md border border-emerald-500/20" title="Approve"
+                                  >
+                                    <Check className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleReview(assignment.id, 'rejected')}
+                                    className="text-rose-500 hover:text-rose-400 p-1.5 transition-colors bg-rose-500/10 hover:bg-rose-500/20 rounded-md border border-rose-500/20" title="Reject / Request Changes"
+                                  >
+                                    <X className="w-4 h-4" />
+                                  </button>
+                                </>
+                              )}
+
+                              <div className="w-px h-4 bg-zinc-700 mx-1"></div>
+                              <button
+                                onClick={() => handleDelete(assignment.id)}
+                                className="text-zinc-500 hover:text-rose-500 p-1.5 transition-colors hover:bg-rose-500/10 rounded-md"
+                                title="Delete Assignment"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-        )}
+
+          {mentorAssignments.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={mentorAssignments.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1); }}
+            />
+          )}
         </>
       )}
+
+      <ConfirmModal
+        isOpen={!!assignmentToDelete}
+        onClose={() => setAssignmentToDelete(null)}
+        onConfirm={() => {
+          if (assignmentToDelete) {
+            deleteMutation.mutate(assignmentToDelete);
+          }
+        }}
+        title="Delete Assignment"
+        description="Are you sure you want to delete this assignment? This action cannot be undone."
+        confirmText="Delete Assignment"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 }

@@ -1,11 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bell, Check, Info, AlertTriangle, CheckCircle2, X, BellDot } from "lucide-react";
+import { Bell, Check, Info, AlertTriangle, CheckCircle2, X, BellDot, Trash2 } from "lucide-react";
 import { useAuth } from "./auth-provider";
-import { AppNotification, mockNotifications } from "@/data/mock-dashboard";
+import { mockNotifications } from "@/data/mock-dashboard";
+import { AppNotification } from "@/types";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { notificationService } from "@/services/notifications";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { PATHS } from "@/config/routes";
 
 interface NotificationMenuProps {
   isOpen: boolean;
@@ -14,36 +18,44 @@ interface NotificationMenuProps {
 
 export function NotificationMenu({ isOpen, onClose }: NotificationMenuProps) {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const queryClient = useQueryClient();
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Initialize and filter notifications
-  useEffect(() => {
-    if (!user) return;
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['notifications', 'dropdown', user?.id],
+    queryFn: () => notificationService.getNotifications(true),
+    enabled: !!user && isOpen,
+  });
 
-    // Load from localStorage or use mock
-    const saved = localStorage.getItem("mockNotifications");
-    const allNotifications: AppNotification[] = saved ? JSON.parse(saved) : mockNotifications;
-
-    // Filter for current user
-    const userNotifications = allNotifications.filter(
-      (n) => n.userId === user.id || (n.userId === "all" && n.targetRole === user.role)
-    );
-
-    // Sort by date descending
-    userNotifications.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    
-    setNotifications(userNotifications);
-
-    if (!saved) {
-      localStorage.setItem("mockNotifications", JSON.stringify(mockNotifications));
+  const readMutation = useMutation({
+    mutationFn: (id: string) => notificationService.markAsRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     }
-  }, [user, isOpen]);
+  });
+
+  const readAllMutation = useMutation({
+    mutationFn: () => notificationService.markAllAsRead(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
+  });
+
+  const clearAllMutation = useMutation({
+    mutationFn: () => notificationService.clearAllNotifications(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    }
+  });
 
   // Handle outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      const target = event.target as HTMLElement;
+      if (target.closest('#notification-bell-btn')) {
+        return; // Ignore if clicking the toggle button
+      }
+      if (menuRef.current && !menuRef.current.contains(target)) {
         onClose();
       }
     }
@@ -57,32 +69,15 @@ export function NotificationMenu({ isOpen, onClose }: NotificationMenuProps) {
 
   const handleMarkAsRead = (id: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    const updated = notifications.map((n) => (n.id === id ? { ...n, isRead: true } : n));
-    setNotifications(updated);
-
-    const saved = localStorage.getItem("mockNotifications");
-    if (saved) {
-      const all: AppNotification[] = JSON.parse(saved);
-      const newAll = all.map((n) => (n.id === id ? { ...n, isRead: true } : n));
-      localStorage.setItem("mockNotifications", JSON.stringify(newAll));
-    }
+    readMutation.mutate(id);
   };
 
   const handleMarkAllAsRead = () => {
-    const updated = notifications.map((n) => ({ ...n, isRead: true }));
-    setNotifications(updated);
+    readAllMutation.mutate();
+  };
 
-    const saved = localStorage.getItem("mockNotifications");
-    if (saved) {
-      const all: AppNotification[] = JSON.parse(saved);
-      const newAll = all.map((n) => {
-        if (n.userId === user?.id || (n.userId === "all" && n.targetRole === user?.role)) {
-          return { ...n, isRead: true };
-        }
-        return n;
-      });
-      localStorage.setItem("mockNotifications", JSON.stringify(newAll));
-    }
+  const handleClearAll = () => {
+    clearAllMutation.mutate();
   };
 
   const getIconInfo = (type: string) => {
@@ -114,7 +109,7 @@ export function NotificationMenu({ isOpen, onClose }: NotificationMenuProps) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 10, scale: 0.95 }}
           transition={{ duration: 0.2, ease: "easeOut" }}
-          className="fixed left-4 right-4 top-[70px] sm:absolute sm:left-auto sm:-right-4 sm:top-[calc(100%+0.5rem)] sm:w-[400px] max-h-[85vh] sm:max-h-none bg-zinc-950 border border-zinc-800 shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-2xl overflow-hidden z-50 flex flex-col"
+          className="fixed inset-x-4 top-[70px] max-h-[calc(100vh-100px)] sm:absolute sm:inset-x-auto sm:right-0 sm:top-[calc(100%+0.5rem)] sm:w-[400px] sm:max-h-[520px] bg-zinc-950 border border-zinc-800 shadow-[0_8px_32px_rgba(0,0,0,0.6)] rounded-2xl overflow-hidden z-50 flex flex-col"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 bg-gradient-to-b from-white/5 to-transparent">
@@ -130,28 +125,16 @@ export function NotificationMenu({ isOpen, onClose }: NotificationMenuProps) {
                 </motion.span>
               )}
             </h3>
-            <div className="flex items-center gap-1">
-              {unreadCount > 0 && (
-                <button 
-                  onClick={handleMarkAllAsRead}
-                  className="text-xs font-medium text-zinc-400 hover:text-white transition-colors flex items-center px-2 py-1 rounded-md hover:bg-white/5 cursor-pointer"
-                >
-                  <Check className="w-3.5 h-3.5 mr-1.5" />
-                  Mark all read
-                </button>
-              )}
-              <div className="w-px h-4 bg-white/10 mx-1"></div>
-              <button 
-                onClick={onClose} 
-                className="p-1.5 text-zinc-500 hover:text-white hover:bg-white/5 rounded-md transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+            <button 
+              onClick={onClose} 
+              className="p-1.5 text-zinc-500 hover:text-white hover:bg-white/5 rounded-md transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
 
           {/* List */}
-          <div className="max-h-[420px] overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex-1 relative">
+          <div className="overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden flex-1 relative">
             {notifications.length === 0 ? (
               <div className="p-12 text-center flex flex-col items-center">
                 <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4 border border-white/5 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]">
@@ -192,7 +175,7 @@ export function NotificationMenu({ isOpen, onClose }: NotificationMenuProps) {
                               {notification.title}
                             </p>
                             <span className="text-[10px] sm:text-[11px] lg:text-xs text-zinc-500 font-medium whitespace-nowrap mt-0.5 transition-colors duration-300">
-                              {formatTimeAgo(notification.date)}
+                              {formatTimeAgo(notification.createdAt || (notification as any).date)}
                             </span>
                           </div>
                           
@@ -220,13 +203,31 @@ export function NotificationMenu({ isOpen, onClose }: NotificationMenuProps) {
           
           {/* Footer */}
           {notifications.length > 0 && (
-            <div className="p-3 border-t border-white/5 bg-zinc-950/50 text-center">
+            <div className="p-3 border-t border-white/5 bg-zinc-950/50 flex items-center justify-between px-5 gap-3">
+              <div className="flex items-center gap-3">
+                {unreadCount > 0 && (
+                  <button 
+                    onClick={handleMarkAllAsRead}
+                    className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 transition-colors flex items-center cursor-pointer gap-1"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Mark all read</span>
+                  </button>
+                )}
+                <button 
+                  onClick={handleClearAll}
+                  className="text-xs font-semibold text-zinc-500 hover:text-red-400 transition-colors flex items-center cursor-pointer gap-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Clear all</span>
+                </button>
+              </div>
               <Link 
-                href="/notifications" 
+                href={PATHS.NOTIFICATIONS} 
                 onClick={onClose}
                 className="text-[11px] sm:text-xs lg:text-[13px] font-medium text-zinc-400 hover:text-white transition-colors"
               >
-                View all notifications
+                View all
               </Link>
             </div>
           )}

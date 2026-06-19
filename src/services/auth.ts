@@ -1,4 +1,7 @@
-import { mockUsersDB, User } from "@/data/mock-dashboard";
+import { User } from "@/types";
+import { api } from "@/lib/axios";
+import { API_ENDPOINTS } from "@/config/endpoints";
+import axios from "axios";
 
 export class AuthError extends Error {
   constructor(message: string) {
@@ -8,31 +11,83 @@ export class AuthError extends Error {
 }
 
 export const authService = {
-  /**
-   * Simulates an API call to login a user with email and password.
-   * In a real app, this would be a fetch/axios call to your backend.
-   */
-  async login(email: string, password: string): Promise<User> {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 800));
+  async register(data: any): Promise<{ user: User; token: string }> {
+    try {
+      const response = await api.post(API_ENDPOINTS.AUTH.REGISTER, data);
+      if (response.data.token) {
+        localStorage.setItem("token", response.data.token);
+      }
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw new AuthError(error.response.data.message || "Registration failed");
+      }
+      throw new AuthError("Unable to connect to server");
+    }
+  },
 
-    // Basic validation
+  async login(email: string, password: string): Promise<User> {
     if (!email || !password) {
       throw new AuthError("Email and password are required.");
     }
 
-    if (password.length < 6) {
-      throw new AuthError("Password must be at least 6 characters long.");
+    try {
+      const response = await api.post(API_ENDPOINTS.AUTH.LOGIN, { email, password });
+      const data = response.data;
+
+      // Save token
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+
+      // Convert role to lower case to match dashboard's expected types if necessary
+      const user = data.user;
+      user.role = user.role.toLowerCase();
+      user.enrolledCourseIds = user.enrolledCourses?.map((c: any) => c.id) || [];
+      user.assignedCourseIds = user.assignedCourses?.map((c: any) => c.id) || [];
+      user.completedTopicIds = user.completedTopics?.map((c: any) => c.id) || [];
+      user.menteeIds = user.mentees?.map((m: any) => m.id) || [];
+
+      return user;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response) {
+        throw new AuthError(error.response.data.message || "Invalid email or password");
+      }
+      throw new AuthError("Unable to connect to server");
     }
+  },
 
-    // Since this is a mock, we accept any 6+ character password for the demo emails
-    const user = mockUsersDB.find(u => u.email.toLowerCase() === email.toLowerCase());
+  async getMe(): Promise<User | null> {
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) return null;
 
-    if (!user) {
-      throw new AuthError("Invalid email or password. Please try again.");
+    try {
+      const response = await api.get(API_ENDPOINTS.AUTH.ME);
+      const user = response.data.user;
+      user.role = user.role.toLowerCase();
+      user.enrolledCourseIds = user.enrolledCourses?.map((c: any) => c.id) || [];
+      user.assignedCourseIds = user.assignedCourses?.map((c: any) => c.id) || [];
+      user.completedTopicIds = user.completedTopics?.map((c: any) => c.id) || [];
+      user.menteeIds = user.mentees?.map((m: any) => m.id) || [];
+      
+      return user;
+    } catch (error) {
+      console.error("Failed to fetch user:", error);
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("token");
+      }
+      return null;
     }
+  },
 
-    // Return a clone of the user object (simulating a fresh API response)
-    return JSON.parse(JSON.stringify(user));
+  async completeTopic(topicId: string): Promise<{ message: string, progressPercentage: number }> {
+    const response = await api.post(API_ENDPOINTS.AUTH.COMPLETE_TOPIC, { topicId });
+    return response.data;
+  },
+
+  logout() {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+    }
   }
 };

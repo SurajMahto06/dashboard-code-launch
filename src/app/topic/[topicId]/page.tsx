@@ -4,21 +4,38 @@ import { use } from "react";
 import { mockTopics, mockModules } from "@/data/mock-dashboard";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, PlayCircle, FileText, MessageSquare, AlertCircle } from "lucide-react";
+import { ArrowLeft, PlayCircle, FileText, MessageSquare, AlertCircle, Lock, Loader2 } from "lucide-react";
 import { useAuth } from "@/components/dashboard/auth-provider";
+import { useQuery } from "@tanstack/react-query";
+import { topicsService } from "@/services/topics";
 
 export default function TopicPage({ params }: { params: Promise<{ topicId: string }> }) {
   const resolvedParams = use(params);
   const { user } = useAuth();
-  const topic = mockTopics.find((t) => t.id === resolvedParams.topicId);
-  const moduleInfo = topic ? mockModules.find(m => m.id === topic.moduleId) : null;
+  
+  const { data: topic, isLoading } = useQuery({
+    queryKey: ['topics', resolvedParams.topicId],
+    queryFn: () => topicsService.getTopicById(resolvedParams.topicId),
+    enabled: !!resolvedParams.topicId,
+  });
+
+  const isPremiumUser = user?.role !== 'student' || user?.plan === 'premium' || user?.plan === 'elite';
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh]">
+        <Loader2 className="w-8 h-8 text-cyan-500 animate-spin mb-4" />
+        <p className="text-zinc-400">Loading topic...</p>
+      </div>
+    );
+  }
 
   if (!topic) {
     notFound();
   }
 
   // RBAC Guard: Ensure students are enrolled
-  if (user?.role === "student" && !user.enrolledCourseIds?.includes(topic.courseId)) {
+  if (user?.role === "student" && !user.enrolledCourseIds?.includes(topic.module?.courseId)) {
     return (
       <div className="w-full p-12 text-center bg-red-950/20 border border-red-900 rounded-2xl mt-12">
         <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
@@ -33,35 +50,60 @@ export default function TopicPage({ params }: { params: Promise<{ topicId: strin
 
   return (
     <div className="w-full pb-12 ">
-      <Link href="/" className="inline-flex items-center text-xs sm:text-[13px] lg:text-sm text-zinc-400 hover:text-cyan-400 mb-6 transition-colors">
+      <Link href={topic.module?.courseId ? `/courses/${topic.module.courseId}` : "/"} className="inline-flex items-center text-xs sm:text-[13px] lg:text-sm text-zinc-400 hover:text-cyan-400 mb-6 transition-colors">
         <ArrowLeft className="w-4 h-4 mr-2" />
-        Back to Dashboard
+        Back to Course
       </Link>
 
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-2">
-          <span className="text-[10px] sm:text-[11px] lg:text-xs font-semibold text-cyan-400 uppercase tracking-wider">{moduleInfo?.title || "Module"}</span>
+          <span className="text-[10px] sm:text-[11px] lg:text-xs font-semibold text-cyan-400 uppercase tracking-wider">{topic.module?.title || "Module"}</span>
         </div>
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-white mb-2">{topic.title}</h1>
         <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400">{topic.description}</p>
       </div>
 
       <div className="bg-black rounded-xl overflow-hidden aspect-video border border-zinc-800 shadow-2xl mb-8 relative group">
-        {/* Placeholder video - using a standard HTML5 video element */}
-        <video 
-          className="w-full h-full object-cover"
-          controls 
-          poster="/placeholder-poster.jpg"
-          src={topic.video.videoUrl}
-        >
-          Your browser does not support the video tag.
-        </video>
+        {isPremiumUser ? (
+          topic.video?.videoUrl ? (
+            <video
+              className="w-full h-full object-cover"
+              controls
+              poster="/placeholder-poster.jpg"
+              src={topic.video.videoUrl}
+            >
+              Your browser does not support the video tag.
+            </video>
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-zinc-900 z-10 text-zinc-500">
+              No video available for this topic.
+            </div>
+          )
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/80 backdrop-blur-sm z-10">
+            <div className="text-center p-6 max-w-md relative z-20">
+              <div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-4 border border-zinc-800 shadow-lg">
+                <Lock className="w-8 h-8 text-cyan-500" />
+              </div>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">Premium Masterclass</h3>
+              <p className="text-sm text-zinc-400 mb-6">Upgrade your plan to unlock high-quality video tutorials and deep-dive technical sessions.</p>
+              <button className="px-6 py-3 bg-cyan-400 hover:bg-cyan-500 text-zinc-950 font-bold rounded-lg transition-colors shadow-[0_0_15px_rgba(8,145,178,0.3)]">
+                Upgrade to Premium
+              </button>
+            </div>
+            {/* Background poster to look like locked video */}
+            <div
+              className="absolute inset-0 w-full h-full opacity-20 -z-10 bg-cover bg-center"
+              style={{ backgroundImage: "url('/placeholder-poster.jpg')" }}
+            />
+          </div>
+        )}
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
           <h2 className="text-base sm:text-lg lg:text-xl font-bold text-white">Next Steps</h2>
-          
+
           <Link href={`/topic/${topic.id}/mcq`} className="flex items-center p-4 bg-zinc-900 border border-zinc-800 rounded-xl hover:border-cyan-800 transition-colors group">
             <div className="p-3 bg-zinc-950 text-cyan-400 rounded-lg mr-4 group-hover:scale-110 transition-transform">
               <FileText className="w-6 h-6" />

@@ -1,13 +1,27 @@
 "use client";
 
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { User as UserIcon, Mail, Shield, LogOut, Award, BookOpen, Clock, Activity, Edit2 } from "lucide-react";
+import { User as UserIcon, Mail, Shield, LogOut, Award, BookOpen, Clock, Activity, Edit2, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
+import { usersService } from "@/services/users";
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
   const router = useRouter();
+
+  const { data: mentors = [], isLoading: isLoadingMentors } = useQuery({
+    queryKey: ['my-mentors'],
+    queryFn: () => usersService.getMyMentors(),
+    enabled: user?.role === "student"
+  });
+
+  const { data: mentees = [], isLoading: isLoadingMentees } = useQuery({
+    queryKey: ['my-mentees'],
+    queryFn: () => usersService.getMyMentees(),
+    enabled: user?.role === "mentor"
+  });
 
   if (!user) return null;
 
@@ -127,13 +141,29 @@ export default function ProfilePage() {
                     </div>
                     <div className="text-2xl font-bold text-white">{user.progressPercentage || 0}%</div>
                   </div>
+                  <div className="bg-zinc-950 border border-zinc-800/50 p-4 rounded-xl">
+                    <div className="flex items-center text-zinc-400 text-xs sm:text-[13px] lg:text-sm mb-2">
+                      <UserIcon className="w-4 h-4 mr-2" /> Assigned Mentors
+                    </div>
+                    {isLoadingMentors ? (
+                      <div className="text-zinc-500 flex items-center">
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Loading...
+                      </div>
+                    ) : (
+                      <div className="text-base font-bold text-white truncate" title={mentors.map((m: any) => m.name).join(', ') || "None"}>
+                        {mentors.length > 0 
+                          ? mentors.map((m: any) => m.name).join(', ') 
+                          : "None"}
+                      </div>
+                    )}
+                  </div>
                 </>
               )}
               {user.role === "mentor" && (
                 <>
                   <div className="bg-zinc-950 border border-zinc-800/50 p-4 rounded-xl">
                     <div className="flex items-center text-zinc-400 text-xs sm:text-[13px] lg:text-sm mb-2">
-                      <BookOpen className="w-4 h-4 mr-2" /> Assigned Courses
+                      <BookOpen className="w-4 h-4 mr-2" /> Assigned Projects
                     </div>
                     <div className="text-2xl font-bold text-white">{user.assignedCourseIds?.length || 0}</div>
                   </div>
@@ -141,7 +171,13 @@ export default function ProfilePage() {
                     <div className="flex items-center text-zinc-400 text-xs sm:text-[13px] lg:text-sm mb-2">
                       <UserIcon className="w-4 h-4 mr-2" /> Active Mentees
                     </div>
-                    <div className="text-2xl font-bold text-white">{user.menteeIds?.length || 0}</div>
+                    {isLoadingMentees ? (
+                      <div className="text-zinc-500 flex items-center">
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      </div>
+                    ) : (
+                      <div className="text-2xl font-bold text-white">{mentees.length || 0}</div>
+                    )}
                   </div>
                 </>
               )}

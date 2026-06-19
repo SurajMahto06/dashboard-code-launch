@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { mockCourses, mockTopics, mockMentorshipQA, mockUsersDB, mockModules } from "@/data/mock-dashboard";
+import { mockModules } from "@/data/mock-dashboard";
+import { useQuery } from "@tanstack/react-query";
+import { coursesService } from "@/services/courses";
+import { usersService } from "@/services/users";
+import { qaService } from "@/services/qa";
 import { PlayCircle, Award, Clock, Users, BookOpen, MessageSquare, Activity, ChevronDown, ChevronRight, FileText } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
@@ -36,12 +40,17 @@ export default function DashboardOverview() {
 }
 
 function AdminDashboard() {
+  const { user } = useAuth();
+  const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: () => usersService.getUsers() });
+  const { data: courses = [] } = useQuery({ queryKey: ["courses"], queryFn: () => coursesService.getCourses() });
+  const { data: qaThreads = [] } = useQuery<any[]>({ queryKey: ["qaThreads", "list", user?.id], queryFn: () => qaService.getQAThreads() });
+
   return (
     <div className="space-y-8">
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Users} label="Total Users" value={mockUsersDB.length.toString()} />
-        <StatCard icon={BookOpen} label="Active Courses" value={mockCourses.length.toString()} />
-        <StatCard icon={MessageSquare} label="Open Q&A" value={mockMentorshipQA.filter(q => q.status === 'pending').length.toString()} />
+        <StatCard icon={Users} label="Total Users" value={users.length.toString()} />
+        <StatCard icon={BookOpen} label="Active Courses" value={courses.length.toString()} />
+        <StatCard icon={MessageSquare} label="Open Q&A" value={qaThreads.filter((q: any) => q.status === 'pending').length.toString()} />
         <StatCard icon={Activity} label="System Health" value="100%" color="text-green-400" bg="bg-green-950" />
       </div>
 
@@ -57,14 +66,23 @@ function AdminDashboard() {
 
 function MentorDashboard() {
   const { user } = useAuth();
-  const assignedCourses = mockCourses.filter(c => user?.assignedCourseIds?.includes(c.id));
-  const pendingQA = mockMentorshipQA.filter(q => q.status === 'pending' && user?.assignedCourseIds?.includes(q.courseId));
+  const { data: mentees = [] } = useQuery({
+    queryKey: ['my-mentees'],
+    queryFn: () => usersService.getMyMentees(),
+    enabled: user?.role === "mentor"
+  });
+  const { data: qaThreads = [] } = useQuery<any[]>({ queryKey: ["qaThreads", "list", user?.id], queryFn: () => qaService.getQAThreads() });
+  const pendingQA = qaThreads.filter((q: any) => q.status === 'pending');
 
   return (
     <div className="space-y-8">
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-        <StatCard icon={Users} label="My Mentees" value={user?.menteeIds?.length?.toString() || "0"} />
-        <StatCard icon={MessageSquare} label="Pending Q&A" value={pendingQA.length.toString()} color="text-yellow-400" bg="bg-yellow-950" />
+        <Link href="/mentees" className="block transition-all hover:scale-[1.01] active:scale-[0.99]">
+          <StatCard icon={Users} label="My Mentees" value={mentees.length.toString()} />
+        </Link>
+        <Link href="/qa" className="block transition-all hover:scale-[1.01] active:scale-[0.99]">
+          <StatCard icon={MessageSquare} label="Pending Q&A" value={pendingQA.length.toString()} color="text-yellow-400" bg="bg-yellow-950" />
+        </Link>
       </div>
 
       <div className="space-y-4">
@@ -74,8 +92,8 @@ function MentorDashboard() {
             <Card key={qa.id} className="p-4 flex flex-col justify-between border border-zinc-800 bg-zinc-900/50 backdrop-blur-md">
               <div>
                 <div className="flex justify-between items-start mb-2">
-                  <span className="font-semibold text-white">{qa.studentName}</span>
-                  <span className="text-[10px] sm:text-[11px] lg:text-xs text-zinc-500">{qa.date}</span>
+                  <span className="font-semibold text-white">{qa.student?.name || 'Unknown Student'}</span>
+                  <span className="text-[10px] sm:text-[11px] lg:text-xs text-zinc-500">{new Date(qa.createdAt || qa.date || Date.now()).toLocaleDateString()}</span>
                 </div>
                 <p className="text-zinc-400 text-xs sm:text-[13px] lg:text-sm mb-4 line-clamp-3">{qa.question}</p>
               </div>

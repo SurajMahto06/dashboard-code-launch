@@ -1,51 +1,60 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { mockUsersDB, mockCourses } from "@/data/mock-dashboard";
-import { Users as UsersIcon, Search, ShieldAlert, Edit, Trash2, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users as UsersIcon, Search, ShieldAlert, Edit, Trash2, Plus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { usersService } from "@/services/users";
+import { coursesService } from "@/services/courses";
 
 export default function UsersPage() {
   const { user } = useAuth();
-  const [usersList, setUsersList] = useState(mockUsersDB);
+  const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    const saved = localStorage.getItem("mockUsersDB");
-    if (saved) {
-      // Migrate old local storage data that might not have the plan field
-      const parsedUsers = JSON.parse(saved);
-      const migratedUsers = parsedUsers.map((u: any) => {
-        let updated = { ...u };
-        if (updated.role === "student" && (!updated.plan || updated.plan === "none")) {
-          updated.plan = updated.email === "student1@elite.com" ? "elite" : "premium";
-        }
-        if (!updated.status) {
-          updated.status = "active"; // Default to active
-        }
-        return updated;
-      });
-      setUsersList(migratedUsers);
-      localStorage.setItem("mockUsersDB", JSON.stringify(migratedUsers));
-    } else {
-      setUsersList(mockUsersDB);
-      localStorage.setItem("mockUsersDB", JSON.stringify(mockUsersDB));
-    }
-  }, []);
+  const { data: usersList = [], isLoading: isLoadingUsers } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => usersService.getUsers(),
+    enabled: user?.role === "admin",
+  });
+
+  const { data: courses = [], isLoading: isLoadingCourses } = useQuery({
+    queryKey: ['courses'],
+    queryFn: () => coursesService.getCourses(),
+    enabled: user?.role === "admin",
+  });
+
+  const isLoading = isLoadingUsers || isLoadingCourses;
+
+  const deleteMutation = useMutation({
+    mutationFn: (userId: string) => usersService.deleteUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      setUserToDelete(null);
+    },
+  });
+
+  const [userToDelete, setUserToDelete] = useState<string | null>(null);
+
+  const handleDelete = (id: string) => {
+    setUserToDelete(id);
+  };
 
   const getCourseBadges = (courseIds: string[] | undefined, role: string) => {
     if (!courseIds || courseIds.length === 0) return <span className="text-zinc-600 italic text-[10px] sm:text-[11px] lg:text-xs">None</span>;
 
     const count = courseIds.length;
     const label = role === 'mentor' ? 'Assigned' : 'Enrolled';
-    const courses = courseIds.map(id => mockCourses.find(c => c.id === id)).filter(Boolean);
+    const activeCourses = courseIds.map(id => courses.find((c: any) => c.id === id) || { id, title: `Course ${id.substring(0, 4)}...` }).filter(Boolean);
 
     return (
       <div className="relative group inline-block">
@@ -56,9 +65,9 @@ export default function UsersPage() {
           {count} {label}
         </span>
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-max max-w-xs bg-white text-zinc-800 dark:bg-zinc-800 dark:text-white text-[10px] sm:text-[11px] lg:text-xs rounded-lg shadow-xl border border-zinc-200 dark:border-zinc-700 z-50 p-3">
-          <div className="font-semibold text-zinc-500 dark:text-zinc-400 mb-2 uppercase tracking-wider text-[10px]">{label} Courses:</div>
+          <div className="font-semibold text-zinc-500 dark:text-zinc-400 mb-2 uppercase tracking-wider text-[10px]">{label} {role === 'mentor' ? 'Projects' : 'Courses'}:</div>
           <div className="flex flex-wrap gap-1.5">
-            {courses.map((course: any) => (
+            {activeCourses.map((course: any) => (
               <span key={course.id} className="bg-zinc-100 text-zinc-700 border border-zinc-200 dark:bg-zinc-700 dark:text-zinc-200 dark:border-zinc-600 px-2 py-0.5 rounded-md text-[10px] font-medium whitespace-nowrap">
                 {course.title}
               </span>
@@ -80,9 +89,9 @@ export default function UsersPage() {
     );
   }
 
-  const filteredUsers = usersList.filter(u => 
-    u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    u.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredUsers = usersList.filter((u: any) => 
+    (u.name || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (u.email || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -133,12 +142,18 @@ export default function UsersPage() {
                 <th scope="col" className="px-6 py-4 whitespace-nowrap">Role</th>
                 <th scope="col" className="px-6 py-4 whitespace-nowrap">Plan</th>
                 <th scope="col" className="px-6 py-4 whitespace-nowrap">Status</th>
-                <th scope="col" className="px-6 py-4 whitespace-nowrap">Courses</th>
+                <th scope="col" className="px-6 py-4 whitespace-nowrap">Courses / Projects</th>
                 <th scope="col" className="px-6 py-4 text-right whitespace-nowrap">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/50">
-              {paginatedUsers.length === 0 ? (
+              {isLoading ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-8 text-center text-zinc-500">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-cyan-500" />
+                  </td>
+                </tr>
+              ) : paginatedUsers.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-8 text-center text-zinc-500">
                     No users found.
@@ -153,58 +168,63 @@ export default function UsersPage() {
                         {serialNumber}
                       </td>
                       <td className="px-6 py-4 font-medium text-white flex items-center whitespace-nowrap">
-                    <div className="w-8 h-8 rounded-full bg-cyan-900 flex items-center justify-center text-cyan-400 font-bold mr-3 shrink-0">
-                      {u.name.charAt(0)}
-                    </div>
-                    {u.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{u.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge variant={u.role === 'admin' ? 'admin' : u.role === 'mentor' ? 'mentor' : 'default'} className="capitalize">
-                      {u.role}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {u.role === "student" ? (
-                      <Badge variant={u.plan === 'elite' ? 'elite' : u.plan === 'premium' ? 'premium' : 'outline'} className="uppercase tracking-wider">
-                        {u.plan || 'none'}
-                      </Badge>
-                    ) : (
-                      <span className="text-zinc-600 text-[10px] sm:text-[11px] lg:text-xs italic">N/A</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`flex items-center text-[10px] sm:text-[11px] lg:text-xs font-medium capitalize ${u.status === 'active' ? 'text-green-600 dark:text-green-400' :
-                      u.status === 'inactive' ? 'text-red-600 dark:text-red-400' :
-                        'text-yellow-600 dark:text-yellow-400'
-                      }`}>
-                      <span className={`w-2 h-2 rounded-full mr-2 ${u.status === 'active' ? 'bg-green-500' :
-                        u.status === 'inactive' ? 'bg-red-500' :
-                          'bg-yellow-500'
-                        }`}></span>
-                      {u.status || 'active'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {u.role === 'admin' ? (
-                      <span className="text-[10px] sm:text-[11px] lg:text-xs font-medium text-zinc-500">All Access</span>
-                    ) : u.role === 'mentor' ? (
-                      getCourseBadges(u.assignedCourseIds, u.role)
-                    ) : (
-                      getCourseBadges(u.enrolledCourseIds, u.role)
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-right flex justify-end items-center gap-1 whitespace-nowrap">
-                    <Link href={`/users/${u.id}/edit`}>
-                      <Button variant="ghost" size="icon">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </Link>
-                    <Button variant="danger" size="icon">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </td>
-                </tr>
+                        <div className="w-8 h-8 rounded-full bg-cyan-900 flex items-center justify-center text-cyan-400 font-bold mr-3 shrink-0 uppercase">
+                          {(u.name || "?").charAt(0)}
+                        </div>
+                        {u.name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">{u.email}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Badge variant={u.role === 'admin' ? 'admin' : u.role === 'mentor' ? 'mentor' : 'default'} className="capitalize">
+                          {u.role}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {u.role === "student" ? (
+                          <Badge variant={u.plan === 'elite' ? 'elite' : u.plan === 'premium' ? 'premium' : 'outline'} className="uppercase tracking-wider">
+                            {u.plan || 'none'}
+                          </Badge>
+                        ) : (
+                          <span className="text-zinc-600 text-[10px] sm:text-[11px] lg:text-xs italic">N/A</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`flex items-center text-[10px] sm:text-[11px] lg:text-xs font-medium capitalize ${u.status === 'active' ? 'text-green-600 dark:text-green-400' :
+                          u.status === 'inactive' ? 'text-red-600 dark:text-red-400' :
+                            'text-yellow-600 dark:text-yellow-400'
+                          }`}>
+                          <span className={`w-2 h-2 rounded-full mr-2 ${u.status === 'active' ? 'bg-green-500' :
+                            u.status === 'inactive' ? 'bg-red-500' :
+                              'bg-yellow-500'
+                            }`}></span>
+                          {u.status || 'active'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {u.role === 'admin' ? (
+                          <span className="text-[10px] sm:text-[11px] lg:text-xs font-medium text-zinc-500">All Access</span>
+                        ) : u.role === 'mentor' ? (
+                          getCourseBadges(u.assignedCourseIds, u.role)
+                        ) : (
+                          getCourseBadges(u.enrolledCourseIds, u.role)
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-right flex justify-end items-center gap-1 whitespace-nowrap">
+                        <Link href={`/users/${u.id}/edit`}>
+                          <Button variant="ghost" size="icon">
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="danger" 
+                          size="icon" 
+                          onClick={() => handleDelete(u.id)}
+                          disabled={deleteMutation.isPending || u.id === user.id}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </td>
+                    </tr>
                   );
                 })
               )}
@@ -214,57 +234,24 @@ export default function UsersPage() {
       </div>
 
       {filteredUsers.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-4">
-          <div className="flex items-center gap-4">
-            <p className="text-xs text-zinc-500">
-              Showing <span className="font-medium text-zinc-300">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium text-zinc-300">{Math.min(currentPage * itemsPerPage, filteredUsers.length)}</span> of <span className="font-medium text-zinc-300">{filteredUsers.length}</span> results
-            </p>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-zinc-500">Rows per page:</span>
-              <select 
-                value={itemsPerPage}
-                onChange={(e) => {
-                  setItemsPerPage(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-                className="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-md px-2 py-1 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="h-8 border-zinc-800 bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white"
-            >
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              Prev
-            </Button>
-            
-            <span className="text-xs text-zinc-500 px-2 font-medium">
-              Page {currentPage} of {totalPages === 0 ? 1 : totalPages}
-            </span>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage >= totalPages || totalPages === 0}
-              className="h-8 border-zinc-800 bg-zinc-900 text-zinc-400 hover:bg-zinc-800 hover:text-white"
-            >
-              Next
-              <ChevronRight className="w-4 h-4 ml-1" />
-            </Button>
-          </div>
-        </div>
+        <Pagination 
+            currentPage={currentPage} 
+            totalPages={totalPages} 
+            totalItems={filteredUsers.length} 
+            itemsPerPage={itemsPerPage} 
+            onPageChange={setCurrentPage} 
+            onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1); }} 
+          />
       )}
+
+      <ConfirmModal
+        isOpen={!!userToDelete}
+        onClose={() => setUserToDelete(null)}
+        onConfirm={() => userToDelete && deleteMutation.mutate(userToDelete)}
+        title="Delete User"
+        description="Are you sure you want to delete this user? This action cannot be undone."
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 }

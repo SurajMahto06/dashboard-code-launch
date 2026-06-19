@@ -17,6 +17,7 @@ import {
   Award
 } from "lucide-react";
 import { useAuth } from "./auth-provider";
+import { PATHS } from "@/config/routes";
 
 export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIsOpen?: (open: boolean) => void }) {
   const pathname = usePathname();
@@ -29,27 +30,27 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setI
     switch (user.role) {
       case "admin":
         return [
-          { name: "System Overview", href: "/", icon: LayoutDashboard },
-          { name: "User Management", href: "/users", icon: Users },
-          { name: "Course Builder", href: "/courses", icon: BookOpen },
-          { name: "Issue Certificate", href: "/issue-certificate", icon: Award },
-          { name: "Global Settings", href: "/settings", icon: Settings },
+          { name: "System Overview", href: PATHS.DASHBOARD, icon: LayoutDashboard },
+          { name: "User Management", href: PATHS.USERS.ROOT, icon: Users },
+          { name: "Course Builder", href: PATHS.COURSES.ROOT, icon: BookOpen },
+          { name: "Issue Certificate", href: PATHS.CERTIFICATES.ISSUE, icon: Award },
+          { name: "Global Settings", href: PATHS.SETTINGS, icon: Settings },
         ];
       case "mentor":
         return [
-          { name: "Mentor Dashboard", href: "/", icon: LayoutDashboard },
-          { name: "My Mentees", href: "/mentees", icon: Users },
-          { name: "Q&A Review", href: "/qa", icon: MessageCircleQuestion },
-          { name: "Assignments", href: "/assignments", icon: FileText },
+          { name: "Mentor Dashboard", href: PATHS.DASHBOARD, icon: LayoutDashboard },
+          { name: "My Mentees", href: PATHS.MENTEES, icon: Users },
+          { name: "Q&A Review", href: PATHS.QA, icon: MessageCircleQuestion },
+          { name: "Assignments", href: PATHS.ASSIGNMENTS, icon: FileText },
         ];
       case "student":
       default:
         return [
-          { name: "My Dashboard", href: "/", icon: LayoutDashboard },
-          { name: "Course Modules", href: "/courses", icon: BookOpen },
-          { name: "Assignments", href: "/assignments", icon: FileText },
-          { name: "Mentorship Q&A", href: "/qa", icon: MessageCircleQuestion },
-          { name: "Certificates", href: "/certificates", icon: ShieldCheck },
+          { name: "My Dashboard", href: PATHS.DASHBOARD, icon: LayoutDashboard },
+          { name: "Course Modules", href: PATHS.COURSES.ROOT, icon: BookOpen },
+          { name: "Assignments", href: PATHS.ASSIGNMENTS, icon: FileText },
+          { name: "Mentorship Q&A", href: PATHS.QA, icon: MessageCircleQuestion },
+          { name: "Certificates", href: PATHS.CERTIFICATES.ROOT, icon: ShieldCheck },
         ];
     }
   };

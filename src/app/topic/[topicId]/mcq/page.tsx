@@ -4,21 +4,37 @@ import { use, useState, useEffect } from "react";
 import { mockTopics } from "@/data/mock-dashboard";
 import { notFound, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, XCircle, ChevronRight, CheckCircle, RotateCcw } from "lucide-react";
+import { ArrowLeft, CheckCircle2, XCircle, ChevronRight, CheckCircle, RotateCcw, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { topicsService } from "@/services/topics";
 
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 
 export default function MCQPage({ params }: { params: Promise<{ topicId: string }> }) {
   const resolvedParams = use(params);
   const router = useRouter();
-  const topic = mockTopics.find((t) => t.id === resolvedParams.topicId);
+
+  const { data: topic, isLoading } = useQuery({
+    queryKey: ['topics', resolvedParams.topicId],
+    queryFn: () => topicsService.getTopicById(resolvedParams.topicId),
+    enabled: !!resolvedParams.topicId,
+  });
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [score, setScore] = useState(0);
   const [showResults, setShowResults] = useState(false);
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh]">
+        <Loader2 className="w-8 h-8 text-cyan-500 animate-spin mb-4" />
+        <p className="text-zinc-400">Loading quiz...</p>
+      </div>
+    );
+  }
 
   if (!topic) return notFound();
 
@@ -148,7 +164,7 @@ export default function MCQPage({ params }: { params: Promise<{ topicId: string 
           </h2>
 
           <div className="space-y-4 mb-10">
-            {currentQuestion.options.map((option, idx) => {
+            {currentQuestion.options.map((option: any, idx: number) => {
               const isSelected = selectedOption === option.id;
               const isCorrectOption = option.id === currentQuestion.correctOptionId;
 
