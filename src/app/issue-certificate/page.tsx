@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
 import { ShieldAlert, Award, Search, Plus, Trash2, Eye, Download, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { AccessDenied } from "@/components/ui/access-denied";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
@@ -77,13 +78,7 @@ export default function IssueCertificatePage() {
   };
 
   if (user?.role !== "admin") {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-        <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">Access Denied</h1>
-        <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400">You must be an administrator to view this page.</p>
-      </div>
-    );
+    return <AccessDenied />;
   }
 
   if (isLoading) {

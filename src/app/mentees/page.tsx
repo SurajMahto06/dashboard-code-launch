@@ -1,7 +1,6 @@
 "use client";
 
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { mockCourses } from "@/data/mock-dashboard";
 import { Users, ShieldAlert, MessageCircle, MoreVertical, FileText, Mail, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";

@@ -1,7 +1,6 @@
 "use client";
 
 import { use, useState, useEffect } from "react";
-import { mockTopics } from "@/data/mock-dashboard";
 import { notFound, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, XCircle, ChevronRight, CheckCircle, RotateCcw, Loader2 } from "lucide-react";

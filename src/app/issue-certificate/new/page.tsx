@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
 import { ShieldAlert, Award, CheckCircle, ArrowLeft, Download, Loader2 } from "lucide-react";
+import { AccessDenied } from "@/components/ui/access-denied";
 import Link from "next/link";
 import { generateCertificatePDF } from "@/lib/pdf";
 import { useForm } from "react-hook-form";
@@ -116,13 +117,7 @@ export default function NewIssueCertificatePage() {
   };
 
   if (user?.role !== "admin") {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-        <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-lg md:text-2xl font-bold text-white mb-2">Access Denied</h1>
-        <p className="text-zinc-400">You must be an administrator to view this page.</p>
-      </div>
-    );
+    return <AccessDenied />;
   }
 
   if (isLoadingCourses || isLoadingUsers) {

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/dashboard/auth-provider";
 import { ArrowLeft, UserPlus, ShieldAlert, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+import { AccessDenied } from "@/components/ui/access-denied";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -65,13 +66,7 @@ export default function NewUserPage() {
   });
 
   if (user?.role !== "admin") {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-        <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-lg md:text-2xl font-bold text-white mb-2">Access Denied</h1>
-        <p className="text-zinc-400">You must be an administrator to view this page.</p>
-      </div>
-    );
+    return <AccessDenied />;
   }
 
   const handleCourseToggle = (courseId: string) => {

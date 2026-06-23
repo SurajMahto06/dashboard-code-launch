@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { usersService } from "@/services/users";
+import { settingsService } from "@/services/settings";
 
 export default function ProfilePage() {
   const { user, logout } = useAuth();
@@ -21,6 +22,11 @@ export default function ProfilePage() {
     queryKey: ['my-mentees'],
     queryFn: () => usersService.getMyMentees(),
     enabled: user?.role === "mentor"
+  });
+
+  const { data: settings } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => settingsService.getSettings()
   });
 
   if (!user) return null;
@@ -70,14 +76,23 @@ export default function ProfilePage() {
                 <Mail className="w-4 h-4 text-zinc-500 mr-3 shrink-0" />
                 <span className="text-zinc-300 truncate">{user.email}</span>
               </div>
-              <div className="flex items-center text-xs sm:text-[13px] lg:text-sm">
-                <Shield className="w-4 h-4 text-zinc-500 mr-3 shrink-0" />
-                <span className="text-zinc-300">ID: <span className="font-mono text-[10px] sm:text-[11px] lg:text-xs">{user.id}</span></span>
-              </div>
             </div>
 
+            {/* Support Info */}
+            {settings?.supportEmail && user.role !== 'admin' && (
+              <div className="p-4 sm:p-6 bg-zinc-950/80 border-t border-zinc-800/50">
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-zinc-500 text-[10px] sm:text-[11px] lg:text-xs font-medium uppercase tracking-wider mb-2">Need Help? Contact Support</span>
+                  <a href={`mailto:${settings.supportEmail}`} className="flex items-center text-cyan-400 hover:text-cyan-300 transition-colors text-xs sm:text-[13px] lg:text-sm font-medium">
+                    <Mail className="w-4 h-4 mr-2" />
+                    {settings.supportEmail}
+                  </a>
+                </div>
+              </div>
+            )}
+
             {/* Logout Button directly below profile info */}
-            <div className="p-4 sm:p-6  bg-zinc-950">
+            <div className="p-4 sm:p-6 bg-zinc-950 border-t border-zinc-800/50">
               <button
                 onClick={handleLogout}
                 className="w-full flex justify-center items-center px-4 py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-xs sm:text-[13px] lg:text-sm font-medium rounded-lg transition-colors border border-red-500/20 cursor-pointer"
@@ -151,8 +166,8 @@ export default function ProfilePage() {
                       </div>
                     ) : (
                       <div className="text-base font-bold text-white truncate" title={mentors.map((m: any) => m.name).join(', ') || "None"}>
-                        {mentors.length > 0 
-                          ? mentors.map((m: any) => m.name).join(', ') 
+                        {mentors.length > 0
+                          ? mentors.map((m: any) => m.name).join(', ')
                           : "None"}
                       </div>
                     )}

@@ -120,6 +120,7 @@ export interface Assignment {
   status: 'pending_submission' | 'submitted' | 'approved' | 'rejected';
   repoUrl?: string;
   fileName?: string;
+  fileUrl?: string;
   assignedAt: string;
   dueDate?: string;
   submittedAt?: string;

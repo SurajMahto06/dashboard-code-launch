@@ -71,15 +71,17 @@ export const topicsService = {
     return uploadFileWithProgress(API_ENDPOINTS.UPLOAD.PDF, 'pdf', file, onProgress);
   },
 
-  async createTopic(data: { 
-    courseId: string; 
-    moduleId: string; 
-    title: string; 
+  async createTopic(data: {
+    courseId: string;
+    moduleId: string;
+    title: string;
     description: string;
     videoUrl?: string;       // Pre-uploaded Cloudinary URL
     pdfUrl?: string;         // Pre-uploaded Cloudinary URL
+    cheatsheetUrl?: string;
     videoFile?: File | null;  // Fallback: direct upload
     pdfFile?: File | null;    // Fallback: direct upload
+    cheatsheetFile?: File | null;
     mcqs: string;
     interviewQuestions: string;
   }): Promise<Topic> {
@@ -88,15 +90,17 @@ export const topicsService = {
     formData.append('moduleId', data.moduleId);
     formData.append('title', data.title);
     formData.append('description', data.description);
-    
+
     // Send pre-uploaded URLs if available (instant save)
     if (data.videoUrl) formData.append('videoUrl', data.videoUrl);
     if (data.pdfUrl) formData.append('pdfUrl', data.pdfUrl);
-    
+    if (data.cheatsheetUrl) formData.append('cheatsheetUrl', data.cheatsheetUrl);
+
     // Fallback: send files for server-side upload (slow)
     if (!data.videoUrl && data.videoFile) formData.append('video', data.videoFile);
     if (!data.pdfUrl && data.pdfFile) formData.append('pdf', data.pdfFile);
-    
+    if (!data.cheatsheetUrl && data.cheatsheetFile) formData.append('cheatsheet', data.cheatsheetFile);
+
     formData.append('mcqs', data.mcqs);
     formData.append('interviewQuestions', data.interviewQuestions);
 
@@ -106,26 +110,30 @@ export const topicsService = {
     return response.data.topic;
   },
 
-  async updateTopic(id: string, data: { 
-    title?: string; 
+  async updateTopic(id: string, data: {
+    title?: string;
     description?: string;
     videoUrl?: string;
     pdfUrl?: string;
+    cheatsheetUrl?: string;
     videoFile?: File | null;
     pdfFile?: File | null;
-    mcqs?: string; 
+    cheatsheetFile?: File | null;
+    mcqs?: string;
     interviewQuestions?: string;
   }): Promise<Topic> {
     const formData = new FormData();
     if (data.title) formData.append('title', data.title);
     if (data.description) formData.append('description', data.description);
-    
+
     if (data.videoUrl) formData.append('videoUrl', data.videoUrl);
     if (data.pdfUrl) formData.append('pdfUrl', data.pdfUrl);
-    
+    if (data.cheatsheetUrl) formData.append('cheatsheetUrl', data.cheatsheetUrl);
+
     if (!data.videoUrl && data.videoFile) formData.append('video', data.videoFile);
     if (!data.pdfUrl && data.pdfFile) formData.append('pdf', data.pdfFile);
-    
+    if (!data.cheatsheetUrl && data.cheatsheetFile) formData.append('cheatsheet', data.cheatsheetFile);
+
     if (data.mcqs) formData.append('mcqs', data.mcqs);
     if (data.interviewQuestions) formData.append('interviewQuestions', data.interviewQuestions);
 

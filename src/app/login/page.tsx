@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
 import { authService, AuthError } from "@/services/auth";
-import { PlayCircle, Loader2, Mail, Lock, AlertCircle } from "lucide-react";
+import { Loader2, Mail, Lock, AlertCircle } from "lucide-react";
+import Image from "next/image";
+import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -19,6 +21,10 @@ type LoginValues = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,14 +55,19 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] px-4 pt-8 pb-16 sm:pt-12 sm:pb-24">
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] px-4 pt-8 pb-16 sm:pt-12 sm:pb-24 overflow-x-hidden w-full">
       <div className="w-full max-w-[420px] relative">
         {/* Subtle background glow outside the card */}
         <div className="absolute -top-12 -right-12 w-64 h-64 bg-cyan-500/10 blur-3xl rounded-full pointer-events-none z-0"></div>
 
         <div className="text-center mb-8 sm:mb-10 relative z-10">
-          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-500 text-zinc-950 mb-6 shadow-lg shadow-cyan-500/20">
-            <PlayCircle className="w-7 h-7 sm:w-8 sm:h-8" />
+          <div className="inline-block text-right mb-8">
+            {mounted && resolvedTheme === "dark" ? (
+              <Image src="/logo-dark.png" alt="Prokodex Logo" width={240} height={60} className="h-12 sm:h-14 w-auto object-contain block" />
+            ) : (
+              <Image src="/logo-light.png" alt="Prokodex Logo" width={240} height={60} className="h-12 sm:h-14 w-auto object-contain block" />
+            )}
+            <span className="block mt-1 sm:mt-1.5 text-xs sm:text-sm font-medium text-zinc-400 dark:text-zinc-500 tracking-widest leading-none uppercase">PORTAL</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-2">Welcome Back</h1>
           <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400">Sign in to your elite mentorship portal</p>
@@ -96,7 +107,6 @@ export default function LoginPage() {
                 <label className="block text-xs sm:text-[13px] lg:text-sm font-medium text-zinc-300" htmlFor="password">
                   Password
                 </label>
-                <a href="#" className="text-[10px] sm:text-[11px] lg:text-xs text-cyan-400 hover:text-cyan-300 transition-colors font-medium">Forgot?</a>
               </div>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">

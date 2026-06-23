@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { mockModules } from "@/data/mock-dashboard";
 import { useQuery } from "@tanstack/react-query";
 import { coursesService } from "@/services/courses";
 import { usersService } from "@/services/users";

@@ -31,7 +31,7 @@ export const assignmentsService = {
     return response.data;
   },
 
-  async submitAssignment(id: string, data: { repoUrl?: string; fileName?: string }): Promise<{ message: string, assignment: Assignment }> {
+  async submitAssignment(id: string, data: { repoUrl?: string; fileName?: string; fileUrl?: string }): Promise<{ message: string, assignment: Assignment }> {
     const response = await api.put(`${API_ENDPOINTS.ASSIGNMENTS.BY_ID(id)}/submit`, data);
     return response.data;
   },

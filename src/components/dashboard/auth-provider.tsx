@@ -37,8 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryClient.setQueryData(['auth-user'], userData);
   };
 
-  const logout = () => {
-    authService.logout();
+  const logout = async () => {
+    await authService.logout();
     queryClient.setQueryData(['auth-user'], null);
     queryClient.clear();
   };

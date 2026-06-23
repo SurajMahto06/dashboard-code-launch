@@ -14,6 +14,20 @@ const spaceGrotesk = Space_Grotesk({
 export const metadata: Metadata = {
   title: "Elite Mentorship | Prokodex Dashboard",
   description: "Video Portal and Mentorship Dashboard",
+  icons: {
+    icon: [
+      {
+        media: '(prefers-color-scheme: light)',
+        url: '/logo-light.png',
+        href: '/logo-light.png',
+      },
+      {
+        media: '(prefers-color-scheme: dark)',
+        url: '/logo-dark.png',
+        href: '/logo-dark.png',
+      },
+    ],
+  },
 };
 
 export default function RootLayout({

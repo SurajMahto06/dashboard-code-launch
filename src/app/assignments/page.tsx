@@ -7,6 +7,8 @@ import { usersService } from "@/services/users";
 import { coursesService } from "@/services/courses";
 import { Assignment } from "@/types";
 import { assignmentsService } from "@/services/assignments";
+import { api } from "@/lib/axios";
+import { API_ENDPOINTS } from "@/config/endpoints";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Pagination } from "@/components/ui/pagination";
@@ -82,7 +84,7 @@ export default function AssignmentsPage() {
 
 
   const submitMutation = useMutation({
-    mutationFn: (data: { id: string, repoUrl?: string, fileName?: string }) => assignmentsService.submitAssignment(data.id, { repoUrl: data.repoUrl, fileName: data.fileName }),
+    mutationFn: (data: { id: string, repoUrl?: string, fileName?: string, fileUrl?: string }) => assignmentsService.submitAssignment(data.id, { repoUrl: data.repoUrl, fileName: data.fileName, fileUrl: data.fileUrl }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assignments'] });
       setSubmittingId(null);
@@ -119,10 +121,25 @@ export default function AssignmentsPage() {
 
 
   // Student Actions
-  const handleStudentSubmit = (e: React.FormEvent) => {
+  const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!submittingId || !repoUrl || !selectedFile) return;
-    submitMutation.mutate({ id: submittingId, repoUrl, fileName: selectedFile.name });
+
+    let fileUrl = "";
+    try {
+      const formData = new FormData();
+      formData.append('document', selectedFile);
+      const res = await api.post(API_ENDPOINTS.UPLOAD.DOCUMENT, formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+      fileUrl = res.data.url;
+    } catch (error) {
+      console.error('File upload failed:', error);
+      // In a real app, show a toast error here
+      return;
+    }
+
+    submitMutation.mutate({ id: submittingId, repoUrl, fileName: selectedFile.name, fileUrl });
   };
 
   // Mentor Actions
@@ -557,9 +574,15 @@ export default function AssignmentsPage() {
                                   </a>
                                 )}
                                 {assignment.fileName && (
-                                  <a href="#" className="inline-flex items-center text-cyan-400 hover:text-cyan-300 text-xs font-medium transition-colors">
-                                    <Download className="w-3.5 h-3.5 mr-1.5" /> {assignment.fileName}
-                                  </a>
+                                  assignment.fileUrl ? (
+                                    <a href={assignment.fileUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-zinc-400 bg-zinc-800/50 px-3 py-1.5 rounded-lg border border-zinc-800 hover:text-cyan-400 hover:border-cyan-500/30 transition-colors">
+                                      <Download className="w-3.5 h-3.5 mr-1.5" /> {assignment.fileName}
+                                    </a>
+                                  ) : (
+                                    <div className="inline-flex items-center text-zinc-400 bg-zinc-800/50 px-3 py-1.5 rounded-lg border border-zinc-800">
+                                      <Download className="w-3.5 h-3.5 mr-1.5" /> {assignment.fileName}
+                                    </div>
+                                  )
                                 )}
                               </div>
                             )}

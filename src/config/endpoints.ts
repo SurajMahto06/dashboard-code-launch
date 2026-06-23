@@ -35,6 +35,7 @@ export const API_ENDPOINTS = {
     IMAGE: '/upload/image',
     VIDEO: '/upload/video',
     PDF: '/upload/pdf',
+    DOCUMENT: '/upload/document',
   },
   CERTIFICATES: {
     ROOT: '/certificates',

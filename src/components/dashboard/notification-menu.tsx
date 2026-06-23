@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Bell, Check, Info, AlertTriangle, CheckCircle2, X, BellDot, Trash2 } from "lucide-react";
 import { useAuth } from "./auth-provider";
-import { mockNotifications } from "@/data/mock-dashboard";
 import { AppNotification } from "@/types";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notificationService } from "@/services/notifications";

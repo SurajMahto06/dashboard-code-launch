@@ -1,7 +1,6 @@
 "use client";
 
 import { use } from "react";
-import { mockTopics, mockModules } from "@/data/mock-dashboard";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, PlayCircle, FileText, MessageSquare, AlertCircle, Lock, Loader2 } from "lucide-react";
@@ -69,7 +68,6 @@ export default function TopicPage({ params }: { params: Promise<{ topicId: strin
             <video
               className="w-full h-full object-cover"
               controls
-              poster="/placeholder-poster.jpg"
               src={topic.video.videoUrl}
             >
               Your browser does not support the video tag.
@@ -91,10 +89,9 @@ export default function TopicPage({ params }: { params: Promise<{ topicId: strin
                 Upgrade to Premium
               </button>
             </div>
-            {/* Background poster to look like locked video */}
+            {/* Background gradient to look like locked video */}
             <div
-              className="absolute inset-0 w-full h-full opacity-20 -z-10 bg-cover bg-center"
-              style={{ backgroundImage: "url('/placeholder-poster.jpg')" }}
+              className="absolute inset-0 w-full h-full opacity-20 -z-10 bg-gradient-to-br from-cyan-950 to-zinc-950"
             />
           </div>
         )}
@@ -128,16 +125,28 @@ export default function TopicPage({ params }: { params: Promise<{ topicId: strin
         <div className="space-y-4">
           <h2 className="text-base sm:text-lg lg:text-xl font-bold text-white">Resources</h2>
           <div className="p-4 sm:p-6 bg-zinc-900 border border-zinc-800 rounded-xl">
-            <ul className="space-y-3">
-              <li className="flex items-start text-xs sm:text-[13px] lg:text-sm text-zinc-300 hover:text-cyan-400 transition-colors cursor-pointer">
-                <FileText className="w-4 h-4 mr-3 shrink-0 text-cyan-500 mt-0.5" />
-                <span>Download Slides (PDF)</span>
-              </li>
-              <li className="flex items-start text-xs sm:text-[13px] lg:text-sm text-zinc-300 hover:text-cyan-400 transition-colors cursor-pointer">
-                <FileText className="w-4 h-4 mr-3 shrink-0 text-cyan-500 mt-0.5" />
-                <span>Topic Cheatsheet (PDF)</span>
-              </li>
-            </ul>
+            {topic.pdfUrl || topic.cheatsheetUrl ? (
+              <ul className="space-y-3">
+                {topic.pdfUrl && (
+                  <li>
+                    <a href={topic.pdfUrl} target="_blank" rel="noopener noreferrer" className="flex items-start text-xs sm:text-[13px] lg:text-sm text-zinc-300 hover:text-cyan-400 transition-colors cursor-pointer group">
+                      <FileText className="w-4 h-4 mr-3 shrink-0 text-cyan-500 mt-0.5 group-hover:scale-110 transition-transform" />
+                      <span>Download Slides (PDF)</span>
+                    </a>
+                  </li>
+                )}
+                {topic.cheatsheetUrl && (
+                  <li>
+                    <a href={topic.cheatsheetUrl} target="_blank" rel="noopener noreferrer" className="flex items-start text-xs sm:text-[13px] lg:text-sm text-zinc-300 hover:text-cyan-400 transition-colors cursor-pointer group">
+                      <FileText className="w-4 h-4 mr-3 shrink-0 text-cyan-500 mt-0.5 group-hover:scale-110 transition-transform" />
+                      <span>Topic Cheatsheet (PDF)</span>
+                    </a>
+                  </li>
+                )}
+              </ul>
+            ) : (
+              <p className="text-sm text-zinc-500">No resources available for this topic.</p>
+            )}
           </div>
         </div>
       </div>

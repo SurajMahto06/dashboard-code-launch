@@ -1,7 +1,6 @@
 "use client";
 
 import { use, useState } from "react";
-import { mockTopics } from "@/data/mock-dashboard";
 import { notFound, useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Lightbulb, UserCheck, Loader2 } from "lucide-react";

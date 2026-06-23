@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
-import { mockCourses } from "@/data/mock-dashboard";
 import { MentorshipQA, QAReply } from "@/types";
 import { useAuth } from "@/components/dashboard/auth-provider";
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
@@ -351,8 +350,8 @@ export default function QAPortal() {
         </div>
 
         {displayedDiscussions.map((qa: any) => {
-          const course = qa.course || mockCourses.find(c => c.id === qa.courseId);
-
+          const course = qa.course;
+          
           return (
             <div key={qa.id} className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden transition-all duration-200">
               <div

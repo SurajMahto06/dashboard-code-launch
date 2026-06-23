@@ -16,12 +16,19 @@ import {
   X,
   Award
 } from "lucide-react";
+import Image from "next/image";
+import { useTheme } from "next-themes";
+import { useState, useEffect } from "react";
 import { useAuth } from "./auth-provider";
 import { PATHS } from "@/config/routes";
 
 export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setIsOpen?: (open: boolean) => void }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   if (!user) return null;
 
@@ -67,9 +74,13 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setI
       )}
       <div className={`fixed lg:static inset-y-0 left-0 z-50 flex h-screen w-64 flex-col bg-zinc-950 border-r border-zinc-800 text-zinc-300 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex h-16 items-center justify-between px-6 ">
-          <div className="flex items-center">
-            <Video className="h-6 w-6 text-cyan-400 mr-2" />
-            <span className="text-base sm:text-lg font-bold text-white">Prokodex</span>
+          <div className="inline-block text-right">
+            {mounted && resolvedTheme === "dark" ? (
+              <Image src="/logo-dark.png" alt="Prokodex" width={120} height={32} className="h-8 w-auto object-contain block" />
+            ) : (
+              <Image src="/logo-light.png" alt="Prokodex" width={120} height={32} className="h-8 w-auto object-contain block" />
+            )}
+            <span className="block mt-0.5 text-[10px] sm:text-[11px] text-zinc-400 dark:text-zinc-500 font-medium tracking-widest leading-none uppercase">PORTAL</span>
           </div>
           <button onClick={() => setIsOpen?.(false)} className="lg:hidden text-zinc-400 hover:text-white">
             <X className="h-6 w-6" />

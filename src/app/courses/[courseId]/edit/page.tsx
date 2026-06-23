@@ -340,9 +340,11 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
           title: title || "Untitled Topic",
           description: description || "",
           videoUrl: videoUploadedUrl || undefined,
-          pdfUrl: pdfUploadedUrl || cheatsheetUploadedUrl || undefined,
+          pdfUrl: pdfUploadedUrl || undefined,
+          cheatsheetUrl: cheatsheetUploadedUrl || undefined,
           videoFile: !videoUploadedUrl ? videoFile : undefined,
-          pdfFile: !(pdfUploadedUrl || cheatsheetUploadedUrl) ? (pdfFile || cheatsheetFile) : undefined,
+          pdfFile: !pdfUploadedUrl ? pdfFile : undefined,
+          cheatsheetFile: !cheatsheetUploadedUrl ? cheatsheetFile : undefined,
           mcqs: JSON.stringify(formattedMcqs),
           interviewQuestions: JSON.stringify(formattedIQs)
         }
@@ -354,9 +356,11 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
         title: title || "Untitled Topic",
         description: description || "",
         videoUrl: videoUploadedUrl || undefined,
-        pdfUrl: pdfUploadedUrl || cheatsheetUploadedUrl || undefined,
+        pdfUrl: pdfUploadedUrl || undefined,
+        cheatsheetUrl: cheatsheetUploadedUrl || undefined,
         videoFile: !videoUploadedUrl ? videoFile : undefined,
-        pdfFile: !(pdfUploadedUrl || cheatsheetUploadedUrl) ? (pdfFile || cheatsheetFile) : undefined,
+        pdfFile: !pdfUploadedUrl ? pdfFile : undefined,
+        cheatsheetFile: !cheatsheetUploadedUrl ? cheatsheetFile : undefined,
         mcqs: JSON.stringify(formattedMcqs),
         interviewQuestions: JSON.stringify(formattedIQs)
       });
@@ -368,6 +372,9 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
     setActiveModuleId(topic.moduleId);
     setTitle(topic.title);
     setDescription(topic.description);
+    setPdfUploadedUrl(topic.pdfUrl || "");
+    setCheatsheetUploadedUrl(topic.cheatsheetUrl || "");
+    setVideoUploadedUrl(topic.video?.videoUrl || "");
 
     if (topic.mcqs && topic.mcqs.length > 0) {
       setMcqs(topic.mcqs.map((m: any) => ({
@@ -613,7 +620,7 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
                 {pdfUploadedUrl ? (
                   <div className="flex flex-col items-center">
                     <CheckCircle2 className="w-10 h-10 text-green-500 mb-2" />
-                    <p className="text-white font-medium text-[13px] truncate w-full px-4">{pdfFile?.name}</p>
+                    <p className="text-white font-medium text-[13px] truncate w-full px-4">{pdfFile?.name || pdfUploadedUrl?.split('/').pop()}</p>
                     <p className="text-green-400 text-[11px] mt-1">✅ Uploaded to cloud</p>
                   </div>
                 ) : pdfUploadProgress !== null && !pdfUploadError ? (
@@ -646,7 +653,7 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
                 {cheatsheetUploadedUrl ? (
                   <div className="flex flex-col items-center">
                     <CheckCircle2 className="w-10 h-10 text-green-500 mb-2" />
-                    <p className="text-white font-medium text-[13px] truncate w-full px-4">{cheatsheetFile?.name}</p>
+                    <p className="text-white font-medium text-[13px] truncate w-full px-4">{cheatsheetFile?.name || cheatsheetUploadedUrl?.split('/').pop()}</p>
                     <p className="text-green-400 text-[11px] mt-1">✅ Uploaded to cloud</p>
                   </div>
                 ) : cheatsheetUploadProgress !== null && !cheatsheetUploadError ? (
