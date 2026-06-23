@@ -23,11 +23,11 @@ export interface PaginatedCertificates {
   total: number;
   page: number;
   totalPages: number;
-  limit: number;
+  per_page: number;
 }
 
 export const certificatesService = {
-  async getCertificates(params?: { page?: number; limit?: number; search?: string }): Promise<PaginatedCertificates> {
+  async getCertificates(params?: { page?: number; per_page?: number; search?: string }): Promise<PaginatedCertificates> {
     const response = await api.get(API_ENDPOINTS.CERTIFICATES.ROOT, { params });
     return response.data;
   },

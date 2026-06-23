@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { FileText, Check, X, ExternalLink, Plus, BookOpen, User as UserIcon, Calendar, Clock, Upload, GitBranch, Download, Trash2, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { FileText, Check, X, ExternalLink, Plus, BookOpen, User as UserIcon, Calendar, Clock, Upload, GitBranch, Download, Trash2, ChevronLeft, ChevronRight, Search, Loader2 } from "lucide-react";
 import { usersService } from "@/services/users";
 import { coursesService } from "@/services/courses";
 import { Assignment } from "@/types";
@@ -29,8 +29,9 @@ export default function AssignmentsPage() {
 
   const { data: response, isLoading, isFetching } = useQuery({
     queryKey: ['assignments', currentPage, itemsPerPage, debouncedSearchQuery],
-    queryFn: () => assignmentsService.getAssignments({ page: currentPage, limit: itemsPerPage, search: debouncedSearchQuery }),
-    enabled: !!user
+    queryFn: () => assignmentsService.getAssignments({ page: currentPage, per_page: itemsPerPage, search: debouncedSearchQuery }),
+    enabled: !!user,
+    staleTime: 0, // Always refetch on pagination/search change
   });
 
   const assignments = response?.data || [];
@@ -328,8 +329,9 @@ export default function AssignmentsPage() {
                   </div>
 
                   <div className="pt-4 /50 mt-2">
-                    <button type="submit" disabled={!repoUrl || !selectedFile} className="w-full px-6 py-3.5 bg-cyan-400 hover:bg-cyan-500 disabled:opacity-50 disabled:hover:bg-cyan-400 text-zinc-950 font-bold text-xs sm:text-[13px] lg:text-sm rounded-lg transition-colors flex justify-center items-center cursor-pointer">
-                      Confirm Submission
+                    <button type="submit" disabled={!repoUrl || !selectedFile || submitMutation.isPending} className="w-full px-6 py-3.5 bg-cyan-400 hover:bg-cyan-500 disabled:opacity-50 disabled:hover:bg-cyan-400 text-zinc-950 font-bold text-xs sm:text-[13px] lg:text-sm rounded-lg transition-colors flex justify-center items-center cursor-pointer">
+                      {submitMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+                      {submitMutation.isPending ? "Submitting..." : "Confirm Submission"}
                     </button>
                   </div>
                 </div>
@@ -501,8 +503,9 @@ export default function AssignmentsPage() {
             </div>
 
             <div className="pt-2">
-              <button type="submit" className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-cyan-400 hover:bg-cyan-500 text-zinc-950 font-bold text-xs sm:text-[13px] lg:text-sm rounded-lg transition-colors cursor-pointer">
-                Assign to Student
+              <button type="submit" disabled={assignMutation.isPending} className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-cyan-400 hover:bg-cyan-500 text-zinc-950 font-bold text-xs sm:text-[13px] lg:text-sm rounded-lg transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                {assignMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+                {assignMutation.isPending ? "Assigning..." : "Assign to Student"}
               </button>
             </div>
           </form>

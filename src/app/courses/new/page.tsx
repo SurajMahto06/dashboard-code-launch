@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/dashboard/auth-provider";
 import { ShieldAlert, ArrowLeft, Image as ImageIcon, Save, CheckCircle2, AlertCircle, UploadCloud } from "lucide-react";
+import { AccessDenied } from "@/components/ui/access-denied";
 import Link from "next/link";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { coursesService } from "@/services/courses";
@@ -37,7 +38,7 @@ export default function NewCoursePage() {
     mutationFn: (courseData: any) => coursesService.createCourse(courseData),
     onSuccess: (newCourse) => {
       queryClient.invalidateQueries({ queryKey: ['courses'] });
-      // Wait a moment so the user sees the success state, then redirect to edit page (course builder)
+      // Wait a moment so the user sees the success state, then redirect to edit page (course management)
       setTimeout(() => {
         router.push(`/courses/${newCourse.id}/edit`);
       }, 1000);
@@ -48,13 +49,7 @@ export default function NewCoursePage() {
   });
 
   if (user?.role !== "admin") {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-        <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-lg md:text-2xl font-bold text-white mb-2">Access Denied</h1>
-        <p className="text-zinc-400">You must be an administrator to create courses.</p>
-      </div>
-    );
+    return <AccessDenied />;
   }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -84,7 +79,7 @@ export default function NewCoursePage() {
     <div className="w-full pb-12 relative">
       <Link href="/courses" className="inline-flex items-center text-[13px] text-zinc-400 hover:text-cyan-400 mb-6 transition-colors">
         <ArrowLeft className="w-4 h-4 mr-2" />
-        Back to Course Builder
+        Back to Course Management
       </Link>
 
       <div className="mb-8">
@@ -100,7 +95,7 @@ export default function NewCoursePage() {
           <div className="absolute inset-0 bg-zinc-900/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-xl">
             <CheckCircle2 className="w-20 h-20 text-green-500 mb-4 animate-bounce" />
             <h2 className="text-base font-bold text-white">Course Created!</h2>
-            <p className="text-zinc-400 mt-2">Redirecting to course builder...</p>
+            <p className="text-zinc-400 mt-2">Redirecting to course management...</p>
           </div>
         )}
 

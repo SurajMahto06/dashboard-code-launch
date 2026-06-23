@@ -28,8 +28,9 @@ export default function IssueCertificatePage() {
 
   const { data: response, isLoading, isFetching } = useQuery({
     queryKey: ['certificates-admin', currentPage, itemsPerPage, debouncedSearchQuery],
-    queryFn: () => certificatesService.getCertificates({ page: currentPage, limit: itemsPerPage, search: debouncedSearchQuery }),
+    queryFn: () => certificatesService.getCertificates({ page: currentPage, per_page: itemsPerPage, search: debouncedSearchQuery }),
     enabled: !!user && user.role === 'admin',
+    staleTime: 0, // Always refetch on pagination/search change
   });
 
   const certificates = response?.data || [];

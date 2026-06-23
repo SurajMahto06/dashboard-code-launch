@@ -53,7 +53,7 @@ export default function CoursesPage() {
           <div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-white mb-6 flex items-center">
               <BookOpen className="w-8 h-8 mr-3 text-cyan-400" />
-              Course Builder
+              Course Management
             </h1>
             <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400">Manage your academy curriculum and modules.</p>
           </div>
@@ -75,14 +75,14 @@ export default function CoursesPage() {
         ) : (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {courses.map(course => (
-              <Card key={course.id} className="overflow-hidden group p-0 border-0 shadow-lg hover:shadow-cyan-900/20 transition-all duration-300">
+              <Card key={course.id} className="overflow-hidden group p-0 hover:border-cyan-800/50 hover:shadow-cyan-900/20 transition-all duration-300">
                 <div
                   className="h-32 relative bg-cover bg-center"
                   style={{ backgroundImage: `url('${course.thumbnail}')` }}
                 >
                   <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
                 </div>
-                <div className="p-4 sm:p-6 bg-zinc-900 ">
+                <div className="p-4 sm:p-6">
                   <h3 className="text-sm sm:text-base lg:text-lg font-bold text-white mb-2">{course.title}</h3>
                   <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400 mb-4 line-clamp-2">{course.description}</p>
                   <div className="flex items-center justify-between pt-4">

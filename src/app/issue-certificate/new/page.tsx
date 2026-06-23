@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { ShieldAlert, Award, CheckCircle, ArrowLeft, Download, Loader2 } from "lucide-react";
+import { ShieldAlert, Award, CheckCircle, ArrowLeft, Download, Loader2, Search } from "lucide-react";
 import { AccessDenied } from "@/components/ui/access-denied";
 import Link from "next/link";
 import { generateCertificatePDF } from "@/lib/pdf";
@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { coursesService } from "@/services/courses";
 import { usersService } from "@/services/users";
 import { certificatesService } from "@/services/certificates";
+import { useDebounce } from "@/hooks/use-debounce";
 
 const certificateSchema = z.object({
   courseId: z.string().min(1, "Course is required"),
@@ -31,6 +32,23 @@ export default function NewIssueCertificatePage() {
   const [issuedCert, setIssuedCert] = useState<any>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
+  const [studentSearch, setStudentSearch] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedStudentName, setSelectedStudentName] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const debouncedStudentSearch = useDebounce(studentSearch, 300);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const { data: courses = [], isLoading: isLoadingCourses } = useQuery({
     queryKey: ['courses'],
     queryFn: () => coursesService.getCourses(),
@@ -38,8 +56,8 @@ export default function NewIssueCertificatePage() {
   });
 
   const { data: response, isLoading: isLoadingUsers } = useQuery({
-    queryKey: ['users', 'student', 'dropdown'],
-    queryFn: () => usersService.getUsers({ role: 'student', limit: 100 }),
+    queryKey: ['users', 'student', 'dropdown', debouncedStudentSearch],
+    queryFn: () => usersService.getUsers({ role: 'student', per_page: 20, search: debouncedStudentSearch }),
     enabled: !!user && user.role === 'admin',
   });
 
@@ -107,6 +125,8 @@ export default function NewIssueCertificatePage() {
 
   const handleReset = () => {
     setIssuedCert(null);
+    setSelectedStudentName("");
+    setStudentSearch("");
     form.reset({
       courseId: "",
       studentId: "",
@@ -194,6 +214,8 @@ export default function NewIssueCertificatePage() {
                   onChange={(e) => {
                     form.setValue("courseId", e.target.value);
                     form.setValue("studentId", ""); // Reset student on course change
+                    setSelectedStudentName("");
+                    setStudentSearch("");
                   }}
                   className={`w-full px-4 py-2.5 bg-zinc-950 border rounded-lg text-[13px] text-white focus:outline-none focus:ring-1 transition-all appearance-none cursor-pointer ${form.formState.errors.courseId ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-zinc-800 focus:border-cyan-500 focus:ring-cyan-500'}`}
                 >
@@ -205,18 +227,62 @@ export default function NewIssueCertificatePage() {
                 {form.formState.errors.courseId && <p className="text-xs text-red-500 mt-1">{form.formState.errors.courseId.message}</p>}
               </div>
 
-              <div>
+              <div ref={dropdownRef} className="relative">
                 <label className="block text-sm sm:text-[15px] font-medium text-zinc-300 mb-2">Select Student</label>
-                <select
-                  {...form.register("studentId")}
-                  disabled={!selectedCourseId}
-                  className={`w-full px-4 py-2.5 bg-zinc-950 border rounded-lg text-[13px] text-white focus:outline-none focus:ring-1 transition-all appearance-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer ${form.formState.errors.studentId ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-zinc-800 focus:border-cyan-500 focus:ring-cyan-500'}`}
+                <div
+                  className={`relative flex items-center w-full px-4 py-2.5 bg-zinc-950 border rounded-lg text-[13px] text-white transition-all ${!selectedCourseId ? 'opacity-50 cursor-not-allowed' : 'cursor-text'} ${form.formState.errors.studentId ? 'border-red-500 focus-within:border-red-500 focus-within:ring-red-500 focus-within:ring-1' : 'border-zinc-800 focus-within:border-cyan-500 focus-within:ring-cyan-500 focus-within:ring-1'}`}
+                  onClick={() => selectedCourseId && setIsDropdownOpen(true)}
                 >
-                  <option value="" disabled>-- Select an eligible student --</option>
-                  {availableStudents.map(student => (
-                    <option key={student.id} value={student.id}>{student.name} ({student.email})</option>
-                  ))}
-                </select>
+                  <Search className="w-4 h-4 text-zinc-500 mr-2 shrink-0" />
+                  <input
+                    type="text"
+                    disabled={!selectedCourseId}
+                    placeholder={selectedStudentName || "-- Search & select an eligible student --"}
+                    value={studentSearch}
+                    onChange={(e) => {
+                      setStudentSearch(e.target.value);
+                      setIsDropdownOpen(true);
+                      if (selectedStudentName && e.target.value !== selectedStudentName) {
+                        setSelectedStudentName("");
+                        form.setValue("studentId", "");
+                      }
+                    }}
+                    onFocus={() => selectedCourseId && setIsDropdownOpen(true)}
+                    className="bg-transparent w-full focus:outline-none placeholder-zinc-500 disabled:cursor-not-allowed text-ellipsis"
+                  />
+                </div>
+
+                {isDropdownOpen && selectedCourseId && (
+                  <div className="absolute z-50 w-full mt-1 bg-zinc-900 border border-zinc-800 rounded-lg shadow-xl max-h-60 overflow-y-auto">
+                    {isLoadingUsers ? (
+                      <div className="p-4 text-center text-zinc-400 text-sm flex items-center justify-center">
+                        <Loader2 className="w-4 h-4 animate-spin mr-2" /> Searching...
+                      </div>
+                    ) : availableStudents.length > 0 ? (
+                      <ul className="py-1">
+                        {availableStudents.map(student => (
+                          <li
+                            key={student.id}
+                            className="px-4 py-2 text-[13px] text-zinc-300 hover:bg-zinc-800 hover:text-white cursor-pointer transition-colors"
+                            onClick={() => {
+                              form.setValue("studentId", student.id, { shouldValidate: true });
+                              setSelectedStudentName(`${student.name} (${student.email})`);
+                              setStudentSearch("");
+                              setIsDropdownOpen(false);
+                            }}
+                          >
+                            <span className="font-medium text-white block">{student.name}</span>
+                            <span className="text-zinc-500 text-xs">{student.email}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="p-4 text-center text-zinc-500 text-sm">
+                        No eligible students found
+                      </div>
+                    )}
+                  </div>
+                )}
                 {form.formState.errors.studentId && <p className="text-xs text-red-500 mt-1">{form.formState.errors.studentId.message}</p>}
               </div>
 
@@ -256,7 +322,7 @@ export default function NewIssueCertificatePage() {
               <p className="text-sm text-red-500 mt-4">Failed to issue certificate. Please try again.</p>
             )}
 
-            <div className="pt-6 border-t border-zinc-800 flex justify-end">
+            <div className="pt-6 flex justify-end">
               <button
                 type="submit"
                 disabled={issueMutation.isPending}

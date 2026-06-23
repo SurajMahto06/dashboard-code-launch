@@ -5,11 +5,12 @@ import { MentorshipQA, QAReply } from "@/types";
 import { useAuth } from "@/components/dashboard/auth-provider";
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
 import { qaService } from "@/services/qa";
-import { MessageSquarePlus, Send, UserCircle2, ShieldCheck, CheckCircle2, BookOpen, ChevronDown, ImageIcon, X, Clock, Lock, Trash2 } from "lucide-react";
+import { MessageSquarePlus, Send, UserCircle2, ShieldCheck, CheckCircle2, BookOpen, ChevronDown, ImageIcon, X, Clock, Lock, Trash2, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 
 const questionSchema = z.object({
   question: z.string().min(5, "Question must be at least 5 characters long"),
@@ -20,6 +21,8 @@ type QuestionValues = z.infer<typeof questionSchema>;
 export default function QAPortal() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [threadToDelete, setThreadToDelete] = useState<string | null>(null);
 
   const formatQADateTime = (dateString: string | Date) => {
     const d = new Date(dateString);
@@ -104,27 +107,10 @@ export default function QAPortal() {
     };
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  useEffect(() => {
-    if (qaList.length > 0 && Object.keys(expandedIds).length === 0) {
-      setExpandedIds({ [qaList[0].id]: true });
-    }
-  }, [qaList]);
 
-  useEffect(() => {
-    if (filterStudent) {
-      const matched = qaList.filter((q: any) => (q.student?.name || q.studentName || '').toLowerCase().includes(filterStudent.toLowerCase()));
-      if (matched.length > 0) {
-        const expanded: Record<string, boolean> = {};
-        matched.forEach((q: any) => {
-          expanded[q.id] = true;
-        });
-        setExpandedIds(expanded);
-      }
-    }
-  }, [filterStudent, qaList]);
 
   const toggleAccordion = (id: string) => {
-    setExpandedIds(prev => ({ ...prev, [id]: !prev[id] }));
+    setExpandedIds(prev => prev[id] ? {} : { [id]: true });
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, callback: (base64s: string[]) => void) => {
@@ -175,6 +161,8 @@ export default function QAPortal() {
     mutationFn: (threadId: string) => qaService.deleteQAThread(threadId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['qaThreads'] });
+      setDeleteModalOpen(false);
+      setThreadToDelete(null);
     },
     onError: (err: any) => {
       alert(err?.response?.data?.message || "Failed to delete discussion thread.");
@@ -315,11 +303,20 @@ export default function QAPortal() {
               </label>
               <button
                 type="submit"
-                disabled={!questionForm.watch("question")?.trim() && newQuestionImages.length === 0}
+                disabled={!questionForm.watch("question")?.trim() || createMutation.isPending}
                 className="w-full sm:w-auto px-6 py-2 text-xs sm:text-[13px] lg:text-sm font-semibold rounded-lg bg-cyan-400 text-zinc-950 hover:bg-cyan-500 transition-colors inline-flex justify-center items-center disabled:opacity-50 cursor-pointer"
               >
-                <Send className="w-4 h-4 mr-2" />
-                Submit Question
+                {createMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Posting...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Submit Question
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -393,7 +390,7 @@ export default function QAPortal() {
                       {/* Only show message preview when accordion is collapsed */}
                       {!expandedIds[qa.id] && (
                         <>
-                          <p className="text-xs sm:text-[13px] lg:text-sm leading-relaxed text-zinc-350 line-clamp-2 mt-1">
+                          <p className="text-xs sm:text-[13px] lg:text-sm leading-relaxed text-zinc-400 line-clamp-2 mt-1">
                             {qa.replies && qa.replies.length > 0 ? (
                               <span>
                                 {(() => {
@@ -429,9 +426,8 @@ export default function QAPortal() {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm("Are you sure you want to delete this discussion thread?")) {
-                            deleteMutation.mutate(qa.id);
-                          }
+                          setThreadToDelete(qa.id);
+                          setDeleteModalOpen(true);
                         }}
                         className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-zinc-850/80 rounded transition-colors cursor-pointer"
                         title="Delete Discussion"
@@ -603,10 +599,17 @@ export default function QAPortal() {
                               </label>
                               <button
                                 onClick={() => handleReply(qa.id)}
-                                disabled={(!replyText[qa.id]?.trim() && (!replyImages[qa.id] || replyImages[qa.id].length === 0))}
+                                disabled={!replyText[qa.id]?.trim() || (replyMutation.isPending && replyMutation.variables?.threadId === qa.id)}
                                 className="w-full sm:w-auto px-6 py-2 text-xs sm:text-[13px] lg:text-sm font-semibold rounded-lg bg-cyan-400 text-zinc-950 hover:bg-cyan-500 transition-colors disabled:opacity-50 inline-flex justify-center items-center"
                               >
-                                Post Reply
+                                {replyMutation.isPending && replyMutation.variables?.threadId === qa.id ? (
+                                  <>
+                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    Posting...
+                                  </>
+                                ) : (
+                                  "Post Reply"
+                                )}
                               </button>
                             </div>
                           </div>
@@ -690,6 +693,23 @@ export default function QAPortal() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ConfirmModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setThreadToDelete(null);
+        }}
+        onConfirm={() => {
+          if (threadToDelete) {
+            deleteMutation.mutate(threadToDelete);
+          }
+        }}
+        title="Delete Discussion"
+        description="Are you sure you want to delete this discussion thread? This action cannot be undone."
+        confirmText="Delete"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 }

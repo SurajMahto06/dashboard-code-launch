@@ -3,6 +3,7 @@
 import { useAuth } from "@/components/dashboard/auth-provider";
 import { ShieldCheck, Download, Award, ShieldAlert, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { AccessDenied } from "@/components/ui/access-denied";
 import { certificatesService } from "@/services/certificates";
 import { generateCertificatePDF } from "@/lib/pdf";
 import { useState } from "react";
@@ -20,13 +21,7 @@ export default function CertificatesPage() {
   const certificates = response?.data || [];
 
   if (user?.role !== "student") {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-        <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-lg md:text-2xl font-bold text-white mb-2">Access Denied</h1>
-        <p className="text-zinc-400">You must be a student to view certificates.</p>
-      </div>
-    );
+    return <AccessDenied message="You must be a student to view certificates." />;
   }
 
   const handleDownloadPDF = async (cert: any) => {

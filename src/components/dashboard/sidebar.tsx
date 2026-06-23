@@ -14,7 +14,8 @@ import {
   ShieldCheck,
   FileText,
   X,
-  Award
+  Award,
+  Ticket
 } from "lucide-react";
 import Image from "next/image";
 import { useTheme } from "next-themes";
@@ -39,8 +40,9 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setI
         return [
           { name: "System Overview", href: PATHS.DASHBOARD, icon: LayoutDashboard },
           { name: "User Management", href: PATHS.USERS.ROOT, icon: Users },
-          { name: "Course Builder", href: PATHS.COURSES.ROOT, icon: BookOpen },
+          { name: "Course Management", href: PATHS.COURSES.ROOT, icon: BookOpen },
           { name: "Issue Certificate", href: PATHS.CERTIFICATES.ISSUE, icon: Award },
+          { name: "Coupons", href: "/coupons", icon: Ticket },
           { name: "Global Settings", href: PATHS.SETTINGS, icon: Settings },
         ];
       case "mentor":
@@ -72,7 +74,7 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setI
           onClick={() => setIsOpen?.(false)}
         />
       )}
-      <div className={`fixed lg:static inset-y-0 left-0 z-50 flex h-screen w-64 flex-col bg-zinc-950 border-r border-zinc-800 text-zinc-300 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      <div className={`fixed lg:static inset-y-0 left-0 z-50 flex h-screen w-64 flex-col bg-zinc-950 border-r border-zinc-800 text-zinc-300 transform transition-transform duration-300 ease-in-out lg:transition-none lg:translate-x-0 ${isOpen ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="flex h-16 items-center justify-between px-6 ">
           <div className="inline-block text-right">
             {mounted && resolvedTheme === "dark" ? (

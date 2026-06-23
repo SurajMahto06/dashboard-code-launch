@@ -2,8 +2,8 @@ import { api } from "@/lib/axios";
 import { MentorshipQA, QAReply } from "@/types";
 
 export const qaService = {
-  getQAThreads: async (page?: number, limit?: number): Promise<any> => {
-    const response = await api.get('/qa', { params: { page, limit } });
+  getQAThreads: async (page?: number, per_page?: number): Promise<any> => {
+    const response = await api.get('/qa', { params: { page, per_page } });
     return response.data;
   },
 

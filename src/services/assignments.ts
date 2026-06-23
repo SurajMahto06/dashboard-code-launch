@@ -7,11 +7,11 @@ export interface PaginatedAssignments {
   total: number;
   page: number;
   totalPages: number;
-  limit: number;
+  per_page: number;
 }
 
 export const assignmentsService = {
-  async getAssignments(params?: { page?: number; limit?: number; search?: string }): Promise<PaginatedAssignments> {
+  async getAssignments(params?: { page?: number; per_page?: number; search?: string }): Promise<PaginatedAssignments> {
     const response = await api.get(API_ENDPOINTS.ASSIGNMENTS.ROOT, { params });
     return response.data;
   },

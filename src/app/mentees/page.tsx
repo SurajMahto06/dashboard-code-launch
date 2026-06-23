@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/components/dashboard/auth-provider";
 import { Users, ShieldAlert, MessageCircle, MoreVertical, FileText, Mail, Loader2 } from "lucide-react";
+import { AccessDenied } from "@/components/ui/access-denied";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usersService } from "@/services/users";
@@ -18,13 +19,7 @@ export default function MenteesPage() {
   }, []);
 
   if (user?.role !== "mentor") {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-        <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">Access Denied</h1>
-        <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400">You must be a mentor to view this page.</p>
-      </div>
-    );
+    return <AccessDenied message="You must be a mentor to view this page." />;
   }
 
   const { data: mentees = [], isLoading } = useQuery({

@@ -137,3 +137,14 @@ export interface Certificate {
   certificateId: string;
   issueDate: string;
 }
+
+export interface Coupon {
+  id: string;
+  code: string;
+  type: 'flat' | 'percentage';
+  value: number;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+

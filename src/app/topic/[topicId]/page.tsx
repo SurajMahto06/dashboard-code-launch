@@ -4,6 +4,7 @@ import { use } from "react";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, PlayCircle, FileText, MessageSquare, AlertCircle, Lock, Loader2 } from "lucide-react";
+import { AccessDenied } from "@/components/ui/access-denied";
 import { useAuth } from "@/components/dashboard/auth-provider";
 import { useQuery } from "@tanstack/react-query";
 import { topicsService } from "@/services/topics";
@@ -35,21 +36,12 @@ export default function TopicPage({ params }: { params: Promise<{ topicId: strin
 
   // RBAC Guard: Ensure students are enrolled
   if (user?.role === "student" && !user.enrolledCourseIds?.includes(topic.module?.courseId)) {
-    return (
-      <div className="w-full p-12 text-center bg-red-950/20 border border-red-900 rounded-2xl mt-12">
-        <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-2">Access Denied</h1>
-        <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400 mb-6">You are not enrolled in the course that contains this topic.</p>
-        <Link href="/" className="px-6 py-3 rounded-lg bg-red-900 text-white hover:bg-red-800 transition-colors">
-          Return to Dashboard
-        </Link>
-      </div>
-    );
+    return <AccessDenied message="You are not enrolled in the course that contains this topic." />;
   }
 
   return (
     <div className="w-full pb-12 ">
-      <Link href={topic.module?.courseId ? `/courses/${topic.module.courseId}` : "/"} className="inline-flex items-center text-xs sm:text-[13px] lg:text-sm text-zinc-400 hover:text-cyan-400 mb-6 transition-colors">
+      <Link href={topic.module?.courseId ? `/courses/${topic.module.courseId}?expandedModule=${topic.moduleId}` : "/"} className="inline-flex items-center text-xs sm:text-[13px] lg:text-sm text-zinc-400 hover:text-cyan-400 mb-6 transition-colors">
         <ArrowLeft className="w-4 h-4 mr-2" />
         Back to Course
       </Link>

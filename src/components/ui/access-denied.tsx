@@ -1,7 +1,7 @@
 import { ShieldAlert, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
-export function AccessDenied() {
+export function AccessDenied({ message }: { message?: string }) {
   return (
     <div className="fixed inset-0 z-50 bg-zinc-950 flex flex-col items-center justify-center p-4 text-center">
       <div className="bg-zinc-900/50 p-8 rounded-2xl border border-red-500/20 max-w-md w-full flex flex-col items-center shadow-2xl backdrop-blur-sm">
@@ -10,7 +10,7 @@ export function AccessDenied() {
         </div>
         <h1 className="text-2xl md:text-3xl font-bold text-white mb-3">Access Denied</h1>
         <p className="text-zinc-400 mb-8 text-sm md:text-base">
-          You must be an administrator to view this page. You do not have the required permissions.
+          {message || "You must be an administrator to view this page. You do not have the required permissions."}
         </p>
         <Link 
           href="/" 

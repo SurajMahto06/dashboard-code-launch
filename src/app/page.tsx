@@ -28,7 +28,7 @@ export default function DashboardOverview() {
         <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400 mt-2">
           {user.role === "admin" ? "System overview and platform management." :
             user.role === "mentor" ? "Here is your mentorship activity overview." :
-              "Ready to continue your elite learning journey?"}
+              "Ready to continue your learning journey?"}
         </p>
       </header>
 

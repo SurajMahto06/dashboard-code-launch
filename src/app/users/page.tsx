@@ -27,8 +27,9 @@ export default function UsersPage() {
 
   const { data: response, isLoading: isLoadingUsers, isFetching } = useQuery({
     queryKey: ['users', currentPage, itemsPerPage, debouncedSearchQuery],
-    queryFn: () => usersService.getUsers({ page: currentPage, limit: itemsPerPage, search: debouncedSearchQuery }),
+    queryFn: () => usersService.getUsers({ page: currentPage, per_page: itemsPerPage, search: debouncedSearchQuery }),
     enabled: user?.role === "admin",
+    staleTime: 0, // Always refetch on pagination/search change
   });
 
   const usersList = response?.data || [];

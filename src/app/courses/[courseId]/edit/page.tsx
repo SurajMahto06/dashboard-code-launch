@@ -4,6 +4,7 @@ import { use, useState, useEffect } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
 import { ShieldAlert, ArrowLeft, Plus, UploadCloud, Video, HelpCircle, MessageSquare, Trash2, Save, CheckCircle2, Edit, FolderPlus, GripVertical, FileText, BookOpen, Edit3, X, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { AccessDenied } from "@/components/ui/access-denied";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
@@ -260,13 +261,7 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   if (user?.role !== "admin") {
-    return (
-      <div className="flex flex-col items-center justify-center h-[60vh] text-center">
-        <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
-        <h1 className="text-lg md:text-2xl font-bold text-white mb-2">Access Denied</h1>
-        <p className="text-zinc-400">You must be an administrator to edit courses.</p>
-      </div>
-    );
+    return <AccessDenied />;
   }
 
   if (isLoading) return <div className="text-white p-8">Loading course details...</div>;
