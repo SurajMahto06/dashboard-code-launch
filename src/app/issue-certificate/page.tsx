@@ -56,6 +56,8 @@ export default function IssueCertificatePage() {
           courseTitle: viewCertificate.course?.title || "Unknown",
           issueDate: new Date(viewCertificate.issueDate).toISOString().split('T')[0],
           certificateId: viewCertificate.certificateId,
+          startDate: viewCertificate.startDate ? new Date(viewCertificate.startDate).toISOString().split('T')[0] : undefined,
+          endDate: viewCertificate.endDate ? new Date(viewCertificate.endDate).toISOString().split('T')[0] : undefined,
         },
         `Certificate-${viewCertificate.certificateId}.pdf`
       );

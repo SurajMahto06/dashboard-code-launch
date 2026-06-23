@@ -96,6 +96,8 @@ export default function NewIssueCertificatePage() {
           courseTitle: issuedCert.course?.title || "Course",
           issueDate: new Date(issuedCert.issueDate).toISOString().split('T')[0],
           certificateId: issuedCert.certificateId,
+          startDate: issuedCert.startDate ? new Date(issuedCert.startDate).toISOString().split('T')[0] : undefined,
+          endDate: issuedCert.endDate ? new Date(issuedCert.endDate).toISOString().split('T')[0] : undefined,
         },
         `Certificate-${issuedCert.certificateId}.pdf`
       );

@@ -33,6 +33,8 @@ export default function CertificatesPage() {
           courseTitle: cert.course?.title || "Course",
           issueDate: new Date(cert.issueDate).toISOString().split('T')[0],
           certificateId: cert.certificateId,
+          startDate: cert.startDate ? new Date(cert.startDate).toISOString().split('T')[0] : undefined,
+          endDate: cert.endDate ? new Date(cert.endDate).toISOString().split('T')[0] : undefined,
         },
         `Certificate-${cert.certificateId}.pdf`
       );
