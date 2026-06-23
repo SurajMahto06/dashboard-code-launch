@@ -82,10 +82,10 @@ export default function CoursesPage() {
                 >
                   <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-colors"></div>
                 </div>
-                <div className="p-4 sm:p-6 bg-zinc-900 border-t border-zinc-800">
+                <div className="p-4 sm:p-6 bg-zinc-900 ">
                   <h3 className="text-sm sm:text-base lg:text-lg font-bold text-white mb-2">{course.title}</h3>
                   <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400 mb-4 line-clamp-2">{course.description}</p>
-                  <div className="flex items-center justify-between pt-4 border-t border-zinc-800">
+                  <div className="flex items-center justify-between pt-4">
                     <Badge variant="default" className="bg-cyan-950 text-cyan-400 hover:bg-cyan-900 border-0">
                       {course.totalTopics || 0} Topics
                     </Badge>
@@ -95,10 +95,10 @@ export default function CoursesPage() {
                           <Edit3 className="w-4 h-4" />
                         </Button>
                       </Link>
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        className="bg-zinc-800 border-zinc-700 hover:text-red-400 hover:border-red-900 hover:bg-red-950/30 transition-colors" 
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="bg-zinc-800 border-zinc-700 hover:text-red-400 hover:border-red-900 hover:bg-red-950/30 transition-colors"
                         title="Delete Course"
                         onClick={() => setCourseToDelete({ id: course.id, title: course.title })}
                       >

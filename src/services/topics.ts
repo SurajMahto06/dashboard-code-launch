@@ -1,5 +1,6 @@
 import { api } from "@/lib/axios";
 import { API_ENDPOINTS } from "@/config/endpoints";
+import axios from "axios";
 
 export interface Topic {
   id: string;
@@ -13,10 +14,61 @@ export interface Topic {
   interviewQuestions: any[];
 }
 
+/**
+ * Upload a file to Cloudinary via our backend, with progress callback.
+ */
+async function uploadFileWithProgress(
+  endpoint: string,
+  fieldName: string,
+  file: File,
+  onProgress: (percent: number) => void
+): Promise<string> {
+  const formData = new FormData();
+  formData.append(fieldName, file);
+
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const baseURL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/v1';
+
+  const response = await axios.post(`${baseURL}${endpoint}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    onUploadProgress: (progressEvent) => {
+      if (progressEvent.total) {
+        const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        onProgress(percent);
+      }
+    },
+  });
+
+  return response.data.url;
+}
+
 export const topicsService = {
   async getTopicById(id: string): Promise<any> {
     const response = await api.get(API_ENDPOINTS.TOPICS.BY_ID(id));
     return response.data;
+  },
+
+  /**
+   * Upload video to Cloudinary with progress tracking
+   */
+  async uploadVideo(
+    file: File,
+    onProgress: (percent: number) => void
+  ): Promise<string> {
+    return uploadFileWithProgress(API_ENDPOINTS.UPLOAD.VIDEO, 'video', file, onProgress);
+  },
+
+  /**
+   * Upload PDF to Cloudinary with progress tracking
+   */
+  async uploadPdf(
+    file: File,
+    onProgress: (percent: number) => void
+  ): Promise<string> {
+    return uploadFileWithProgress(API_ENDPOINTS.UPLOAD.PDF, 'pdf', file, onProgress);
   },
 
   async createTopic(data: { 
@@ -24,18 +76,27 @@ export const topicsService = {
     moduleId: string; 
     title: string; 
     description: string;
-    videoFile?: File | null;
-    pdfFile?: File | null;
-    mcqs: string; // JSON string
-    interviewQuestions: string; // JSON string
+    videoUrl?: string;       // Pre-uploaded Cloudinary URL
+    pdfUrl?: string;         // Pre-uploaded Cloudinary URL
+    videoFile?: File | null;  // Fallback: direct upload
+    pdfFile?: File | null;    // Fallback: direct upload
+    mcqs: string;
+    interviewQuestions: string;
   }): Promise<Topic> {
     const formData = new FormData();
     formData.append('courseId', data.courseId);
     formData.append('moduleId', data.moduleId);
     formData.append('title', data.title);
     formData.append('description', data.description);
-    if (data.videoFile) formData.append('video', data.videoFile);
-    if (data.pdfFile) formData.append('pdf', data.pdfFile);
+    
+    // Send pre-uploaded URLs if available (instant save)
+    if (data.videoUrl) formData.append('videoUrl', data.videoUrl);
+    if (data.pdfUrl) formData.append('pdfUrl', data.pdfUrl);
+    
+    // Fallback: send files for server-side upload (slow)
+    if (!data.videoUrl && data.videoFile) formData.append('video', data.videoFile);
+    if (!data.pdfUrl && data.pdfFile) formData.append('pdf', data.pdfFile);
+    
     formData.append('mcqs', data.mcqs);
     formData.append('interviewQuestions', data.interviewQuestions);
 
@@ -48,6 +109,8 @@ export const topicsService = {
   async updateTopic(id: string, data: { 
     title?: string; 
     description?: string;
+    videoUrl?: string;
+    pdfUrl?: string;
     videoFile?: File | null;
     pdfFile?: File | null;
     mcqs?: string; 
@@ -56,8 +119,13 @@ export const topicsService = {
     const formData = new FormData();
     if (data.title) formData.append('title', data.title);
     if (data.description) formData.append('description', data.description);
-    if (data.videoFile) formData.append('video', data.videoFile);
-    if (data.pdfFile) formData.append('pdf', data.pdfFile);
+    
+    if (data.videoUrl) formData.append('videoUrl', data.videoUrl);
+    if (data.pdfUrl) formData.append('pdfUrl', data.pdfUrl);
+    
+    if (!data.videoUrl && data.videoFile) formData.append('video', data.videoFile);
+    if (!data.pdfUrl && data.pdfFile) formData.append('pdf', data.pdfFile);
+    
     if (data.mcqs) formData.append('mcqs', data.mcqs);
     if (data.interviewQuestions) formData.append('interviewQuestions', data.interviewQuestions);
 

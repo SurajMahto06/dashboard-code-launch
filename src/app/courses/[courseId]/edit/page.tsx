@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { ShieldAlert, ArrowLeft, Plus, UploadCloud, Video, HelpCircle, MessageSquare, Trash2, Save, CheckCircle2, Edit, FolderPlus, GripVertical, FileText, BookOpen, Edit3, X } from "lucide-react";
+import { ShieldAlert, ArrowLeft, Plus, UploadCloud, Video, HelpCircle, MessageSquare, Trash2, Save, CheckCircle2, Edit, FolderPlus, GripVertical, FileText, BookOpen, Edit3, X, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -70,6 +70,7 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
     mutationFn: (data: any) => coursesService.updateCourse(resolvedParams.courseId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses', resolvedParams.courseId] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] }); // Invalidate global list to show new thumbnail
       setIsEditingCourseInfo(false);
     }
   });
@@ -89,6 +90,7 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
     mutationFn: (data: { courseId: string; title: string; order: number }) => modulesService.createModule(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses', resolvedParams.courseId] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] }); // Update counts on main page
       setIsAddingModule(false);
       setNewModuleTitle("");
     }
@@ -98,6 +100,7 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
     mutationFn: (moduleId: string) => modulesService.deleteModule(moduleId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses', resolvedParams.courseId] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
       setModuleToDelete(null);
     }
   });
@@ -112,6 +115,7 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
     mutationFn: (data: any) => topicsService.createTopic(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses', resolvedParams.courseId] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
       setIsAddingTopic(false);
       setEditingTopicId(null);
       setActiveModuleId(null);
@@ -126,6 +130,7 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
     mutationFn: (data: { id: string, payload: any }) => topicsService.updateTopic(data.id, data.payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses', resolvedParams.courseId] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
       setIsAddingTopic(false);
       setEditingTopicId(null);
       setActiveModuleId(null);
@@ -140,6 +145,7 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
     mutationFn: (topicId: string) => topicsService.deleteTopic(topicId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses', resolvedParams.courseId] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
       setTopicToDelete(null);
     }
   });
@@ -154,6 +160,7 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
     mutationFn: (data: { id: string, title: string }) => modulesService.updateModule(data.id, { title: data.title }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses', resolvedParams.courseId] });
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
       setEditingModuleId(null);
       setEditingModuleTitle("");
     }
@@ -170,8 +177,78 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
   const [description, setDescription] = useState("");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
-  const [cheatsheetFile, setCheatsheetFile] = useState<File | null>(null); // Keeping in state but we'll merge into pdf for now
+  const [cheatsheetFile, setCheatsheetFile] = useState<File | null>(null);
   const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
+
+  // Pre-upload state (upload on file select)
+  const [videoUploadProgress, setVideoUploadProgress] = useState<number | null>(null);
+  const [videoUploadedUrl, setVideoUploadedUrl] = useState<string | null>(null);
+  const [videoUploadError, setVideoUploadError] = useState<string | null>(null);
+
+  const [pdfUploadProgress, setPdfUploadProgress] = useState<number | null>(null);
+  const [pdfUploadedUrl, setPdfUploadedUrl] = useState<string | null>(null);
+  const [pdfUploadError, setPdfUploadError] = useState<string | null>(null);
+
+  const [cheatsheetUploadProgress, setCheatsheetUploadProgress] = useState<number | null>(null);
+  const [cheatsheetUploadedUrl, setCheatsheetUploadedUrl] = useState<string | null>(null);
+  const [cheatsheetUploadError, setCheatsheetUploadError] = useState<string | null>(null);
+
+  // Handle video file selection → immediately start uploading
+  const handleVideoSelect = async (file: File | null) => {
+    if (!file) return;
+    setVideoFile(file);
+    setVideoUploadProgress(0);
+    setVideoUploadError(null);
+    setVideoUploadedUrl(null);
+    try {
+      const url = await topicsService.uploadVideo(file, (percent) => {
+        setVideoUploadProgress(percent);
+      });
+      setVideoUploadedUrl(url);
+      setVideoUploadProgress(100);
+    } catch (err: any) {
+      setVideoUploadError(err?.response?.data?.message || 'Video upload failed');
+      setVideoUploadProgress(null);
+    }
+  };
+
+  // Handle PDF file selection → immediately start uploading
+  const handlePdfSelect = async (file: File | null) => {
+    if (!file) return;
+    setPdfFile(file);
+    setPdfUploadProgress(0);
+    setPdfUploadError(null);
+    setPdfUploadedUrl(null);
+    try {
+      const url = await topicsService.uploadPdf(file, (percent) => {
+        setPdfUploadProgress(percent);
+      });
+      setPdfUploadedUrl(url);
+      setPdfUploadProgress(100);
+    } catch (err: any) {
+      setPdfUploadError(err?.response?.data?.message || 'PDF upload failed');
+      setPdfUploadProgress(null);
+    }
+  };
+
+  // Handle Cheatsheet selection → immediately start uploading using PDF endpoint
+  const handleCheatsheetSelect = async (file: File | null) => {
+    if (!file) return;
+    setCheatsheetFile(file);
+    setCheatsheetUploadProgress(0);
+    setCheatsheetUploadError(null);
+    setCheatsheetUploadedUrl(null);
+    try {
+      const url = await topicsService.uploadPdf(file, (percent) => {
+        setCheatsheetUploadProgress(percent);
+      });
+      setCheatsheetUploadedUrl(url);
+      setCheatsheetUploadProgress(100);
+    } catch (err: any) {
+      setCheatsheetUploadError(err?.response?.data?.message || 'Cheatsheet upload failed');
+      setCheatsheetUploadProgress(null);
+    }
+  };
 
   // MCQ State
   const [mcqs, setMcqs] = useState<MCQInput[]>([{ question: "", options: ["", "", "", ""], correctIndex: 0 }]);
@@ -262,8 +339,10 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
         payload: {
           title: title || "Untitled Topic",
           description: description || "",
-          videoFile: videoFile,
-          pdfFile: pdfFile || cheatsheetFile,
+          videoUrl: videoUploadedUrl || undefined,
+          pdfUrl: pdfUploadedUrl || cheatsheetUploadedUrl || undefined,
+          videoFile: !videoUploadedUrl ? videoFile : undefined,
+          pdfFile: !(pdfUploadedUrl || cheatsheetUploadedUrl) ? (pdfFile || cheatsheetFile) : undefined,
           mcqs: JSON.stringify(formattedMcqs),
           interviewQuestions: JSON.stringify(formattedIQs)
         }
@@ -274,8 +353,10 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
         moduleId: activeModuleId,
         title: title || "Untitled Topic",
         description: description || "",
-        videoFile: videoFile,
-        pdfFile: pdfFile || cheatsheetFile, // Fallback
+        videoUrl: videoUploadedUrl || undefined,
+        pdfUrl: pdfUploadedUrl || cheatsheetUploadedUrl || undefined,
+        videoFile: !videoUploadedUrl ? videoFile : undefined,
+        pdfFile: !(pdfUploadedUrl || cheatsheetUploadedUrl) ? (pdfFile || cheatsheetFile) : undefined,
         mcqs: JSON.stringify(formattedMcqs),
         interviewQuestions: JSON.stringify(formattedIQs)
       });
@@ -314,6 +395,9 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
   const openNewTopicEditor = (moduleId: string) => {
     setTitle(""); setDescription(""); setVideoFile(null); setEditingTopicId(null);
     setPdfFile(null); setCheatsheetFile(null);
+    setVideoUploadProgress(null); setVideoUploadedUrl(null); setVideoUploadError(null);
+    setPdfUploadProgress(null); setPdfUploadedUrl(null); setPdfUploadError(null);
+    setCheatsheetUploadProgress(null); setCheatsheetUploadedUrl(null); setCheatsheetUploadError(null);
     setMcqs([{ question: "", options: ["", "", "", ""], correctIndex: 0 }]);
     setInterviewQs([{ question: "", hints: "" }]);
     setErrors({});
@@ -361,24 +445,53 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
               2. Video Content
             </h2>
             {errors.videoFile && <p className="text-red-500 text-xs mb-3">{errors.videoFile}</p>}
-            <div className={`border-2 border-dashed ${errors.videoFile ? "border-red-500 bg-red-500/5" : "border-zinc-700 hover:border-cyan-500 bg-zinc-950"} rounded-xl p-10 text-center transition-colors relative group`}>
-              <input
-                type="file"
-                accept="video/mp4,video/x-m4v,video/*"
-                onChange={(e) => { setVideoFile(e.target.files?.[0] || null); if (errors.videoFile) setErrors({ ...errors, videoFile: "" }); }}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-              />
-              {videoFile ? (
+            <div className={`border-2 border-dashed ${videoUploadError ? "border-red-500 bg-red-500/5" : videoUploadedUrl ? "border-green-500/50 bg-green-950/10" : errors.videoFile ? "border-red-500 bg-red-500/5" : "border-zinc-700 hover:border-cyan-500 bg-zinc-950"} rounded-xl p-10 text-center transition-colors relative group`}>
+              {/* Hide file input while uploading */}
+              {videoUploadProgress === null || videoUploadedUrl ? (
+                <input
+                  type="file"
+                  accept="video/mp4,video/x-m4v,video/*"
+                  onChange={(e) => { handleVideoSelect(e.target.files?.[0] || null); if (errors.videoFile) setErrors({ ...errors, videoFile: "" }); }}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+              ) : null}
+
+              {/* State: Upload complete */}
+              {videoUploadedUrl ? (
                 <div className="flex flex-col items-center">
                   <CheckCircle2 className="w-12 h-12 text-green-500 mb-3" />
-                  <p className="text-white font-medium text-xs sm:text-[13px]">{videoFile.name}</p>
-                  <p className="text-zinc-500 text-[11px] sm:text-xs mt-1">Ready for upload</p>
+                  <p className="text-white font-medium text-xs sm:text-[13px]">{videoFile?.name}</p>
+                  <p className="text-green-400 text-[11px] sm:text-xs mt-1">✅ Uploaded to cloud — Save will be instant!</p>
+                </div>
+              ) : videoUploadProgress !== null && !videoUploadError ? (
+                /* State: Uploading with progress */
+                <div className="flex flex-col items-center w-full">
+                  <Loader2 className="w-10 h-10 text-cyan-400 animate-spin mb-3" />
+                  <p className="text-white font-medium text-xs sm:text-[13px] mb-1">{videoFile?.name}</p>
+                  <p className="text-cyan-400 text-[11px] sm:text-xs mb-3">Uploading to cloud... {videoUploadProgress}%</p>
+                  <div className="w-full max-w-sm bg-zinc-800 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-cyan-500 to-cyan-400 h-2.5 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${videoUploadProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-zinc-500 text-[10px] mt-2">Please wait, do not close this page</p>
+                </div>
+              ) : videoUploadError ? (
+                /* State: Upload error */
+                <div className="flex flex-col items-center">
+                  <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mb-3">
+                    <X className="w-6 h-6 text-red-400" />
+                  </div>
+                  <p className="text-red-400 font-medium text-xs sm:text-[13px]">{videoUploadError}</p>
+                  <p className="text-zinc-500 text-[11px] sm:text-xs mt-1">Click to try again</p>
                 </div>
               ) : (
+                /* State: No file selected */
                 <div className="flex flex-col items-center">
                   <UploadCloud className="w-12 h-12 text-zinc-500 group-hover:text-cyan-400 transition-colors mb-3" />
                   <p className="text-zinc-300 font-medium text-xs sm:text-[13px] mb-1">Click or drag video to upload</p>
-                  <p className="text-zinc-500 text-[11px] sm:text-xs">MP4, WebM up to 2GB</p>
+                  <p className="text-zinc-500 text-[11px] sm:text-xs">MP4, WebM up to 1GB — uploads immediately</p>
                 </div>
               )}
             </div>
@@ -488,46 +601,68 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
             {errors.attachments && <p className="text-red-500 text-xs mb-4 p-3 bg-red-500/10 rounded-lg">{errors.attachments}</p>}
 
             <div className="grid gap-6 md:grid-cols-2">
-              <div className={`border-2 border-dashed ${errors.attachments ? "border-red-500 bg-red-500/5" : "border-zinc-700 hover:border-cyan-500 bg-zinc-950"} rounded-xl p-8 text-center transition-colors relative group`}>
-                <input
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => { setPdfFile(e.target.files?.[0] || null); if (errors.attachments) setErrors({ ...errors, attachments: "" }); }}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-                {pdfFile ? (
+              <div className={`border-2 border-dashed ${pdfUploadedUrl ? "border-green-500/50 bg-green-950/10" : errors.attachments ? "border-red-500 bg-red-500/5" : "border-zinc-700 hover:border-cyan-500 bg-zinc-950"} rounded-xl p-8 text-center transition-colors relative group`}>
+                {(pdfUploadProgress === null || pdfUploadedUrl) && (
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => { handlePdfSelect(e.target.files?.[0] || null); if (errors.attachments) setErrors({ ...errors, attachments: "" }); }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                )}
+                {pdfUploadedUrl ? (
                   <div className="flex flex-col items-center">
                     <CheckCircle2 className="w-10 h-10 text-green-500 mb-2" />
-                    <p className="text-white font-medium text-[13px] truncate w-full px-4">{pdfFile.name}</p>
-                    <p className="text-zinc-500 text-[11px] mt-1">PDF attached</p>
+                    <p className="text-white font-medium text-[13px] truncate w-full px-4">{pdfFile?.name}</p>
+                    <p className="text-green-400 text-[11px] mt-1">✅ Uploaded to cloud</p>
+                  </div>
+                ) : pdfUploadProgress !== null && !pdfUploadError ? (
+                  <div className="flex flex-col items-center w-full">
+                    <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mb-2" />
+                    <p className="text-white font-medium text-[13px]">{pdfFile?.name}</p>
+                    <p className="text-cyan-400 text-[11px] mt-1">Uploading... {pdfUploadProgress}%</p>
+                    <div className="w-full max-w-[200px] bg-zinc-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                      <div className="bg-cyan-400 h-1.5 rounded-full transition-all duration-300" style={{ width: `${pdfUploadProgress}%` }} />
+                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center">
                     <FileText className="w-10 h-10 text-zinc-500 group-hover:text-cyan-400 transition-colors mb-2" />
                     <p className="text-zinc-300 font-medium text-[13px] mb-1">Upload PDF Note</p>
-                    <p className="text-zinc-500 text-[11px]">.pdf format</p>
+                    <p className="text-zinc-500 text-[11px]">.pdf format — uploads immediately</p>
                   </div>
                 )}
               </div>
 
-              <div className={`border-2 border-dashed ${errors.attachments ? "border-red-500 bg-red-500/5" : "border-zinc-700 hover:border-cyan-500 bg-zinc-950"} rounded-xl p-8 text-center transition-colors relative group`}>
-                <input
-                  type="file"
-                  accept=".pdf,.md,.txt"
-                  onChange={(e) => { setCheatsheetFile(e.target.files?.[0] || null); if (errors.attachments) setErrors({ ...errors, attachments: "" }); }}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-                {cheatsheetFile ? (
+              <div className={`border-2 border-dashed ${cheatsheetUploadedUrl ? "border-green-500/50 bg-green-950/10" : errors.attachments ? "border-red-500 bg-red-500/5" : "border-zinc-700 hover:border-cyan-500 bg-zinc-950"} rounded-xl p-8 text-center transition-colors relative group`}>
+                {(cheatsheetUploadProgress === null || cheatsheetUploadedUrl) && (
+                  <input
+                    type="file"
+                    accept=".pdf,.md,.txt"
+                    onChange={(e) => { handleCheatsheetSelect(e.target.files?.[0] || null); if (errors.attachments) setErrors({ ...errors, attachments: "" }); }}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                )}
+                {cheatsheetUploadedUrl ? (
                   <div className="flex flex-col items-center">
                     <CheckCircle2 className="w-10 h-10 text-green-500 mb-2" />
-                    <p className="text-white font-medium text-[13px] truncate w-full px-4">{cheatsheetFile.name}</p>
-                    <p className="text-zinc-500 text-[11px] mt-1">Cheatsheet attached</p>
+                    <p className="text-white font-medium text-[13px] truncate w-full px-4">{cheatsheetFile?.name}</p>
+                    <p className="text-green-400 text-[11px] mt-1">✅ Uploaded to cloud</p>
+                  </div>
+                ) : cheatsheetUploadProgress !== null && !cheatsheetUploadError ? (
+                  <div className="flex flex-col items-center w-full">
+                    <Loader2 className="w-8 h-8 text-cyan-400 animate-spin mb-2" />
+                    <p className="text-white font-medium text-[13px]">{cheatsheetFile?.name}</p>
+                    <p className="text-cyan-400 text-[11px] mt-1">Uploading... {cheatsheetUploadProgress}%</p>
+                    <div className="w-full max-w-[200px] bg-zinc-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                      <div className="bg-cyan-400 h-1.5 rounded-full transition-all duration-300" style={{ width: `${cheatsheetUploadProgress}%` }} />
+                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-col items-center">
                     <BookOpen className="w-10 h-10 text-zinc-500 group-hover:text-cyan-400 transition-colors mb-2" />
                     <p className="text-zinc-300 font-medium text-[13px] mb-1">Upload Cheatsheet</p>
-                    <p className="text-zinc-500 text-[11px]">.pdf, .md, .txt</p>
+                    <p className="text-zinc-500 text-[11px]">.pdf, .md, .txt — uploads immediately</p>
                   </div>
                 )}
               </div>
@@ -538,9 +673,18 @@ export default function CourseEditorPage({ params }: { params: Promise<{ courseI
             <button onClick={() => setIsAddingTopic(false)} className="px-4 py-2 text-[13px] bg-zinc-800 hover:bg-zinc-700 text-white font-medium rounded-lg transition-colors">
               Cancel
             </button>
-            <button onClick={handleSaveTopic} className="inline-flex items-center justify-center px-4 py-2 text-[13px] bg-cyan-400 hover:bg-cyan-500 text-zinc-950 font-bold font-medium rounded-lg transition-colors shadow-[0_0_20px_rgba(8,145,178,0.3)] cursor-pointer">
-              <Save className="w-4 h-4 mr-2" />
-              {editingTopicId ? "Update Topic" : "Save Topic"}
+            <button
+              onClick={handleSaveTopic}
+              disabled={createTopicMutation.isPending || updateTopicMutation.isPending || (videoUploadProgress !== null && !videoUploadedUrl && !videoUploadError) || (pdfUploadProgress !== null && !pdfUploadedUrl && !pdfUploadError) || (cheatsheetUploadProgress !== null && !cheatsheetUploadedUrl && !cheatsheetUploadError)}
+              className="inline-flex items-center justify-center px-4 py-2 text-[13px] bg-cyan-400 hover:bg-cyan-500 text-zinc-950 font-bold font-medium rounded-lg transition-colors shadow-[0_0_20px_rgba(8,145,178,0.3)] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {createTopicMutation.isPending || updateTopicMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Saving...</>
+              ) : ((videoUploadProgress !== null && !videoUploadedUrl && !videoUploadError) || (pdfUploadProgress !== null && !pdfUploadedUrl && !pdfUploadError) || (cheatsheetUploadProgress !== null && !cheatsheetUploadedUrl && !cheatsheetUploadError)) ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Wait for upload...</>
+              ) : (
+                <><Save className="w-4 h-4 mr-2" /> {editingTopicId ? "Update Topic" : "Save Topic"}</>
+              )}
             </button>
           </div>
         </Card>
