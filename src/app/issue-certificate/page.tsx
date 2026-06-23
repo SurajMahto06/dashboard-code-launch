@@ -2,47 +2,70 @@
 
 import { useState } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { mockCertificatesDB, mockUsersDB, mockCourses } from "@/data/mock-dashboard";
-import { ShieldAlert, Award, Search, Plus, Trash2, Eye, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { ShieldAlert, Award, Search, Plus, Trash2, Eye, Download, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/ui/pagination";
 import { Button } from "@/components/ui/button";
 import { generateCertificatePDF } from "@/lib/pdf";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { certificatesService } from "@/services/certificates";
+import { useDebounce } from "@/hooks/use-debounce";
+import { Loader } from "@/components/ui/loader";
 
 export default function IssueCertificatePage() {
   const { user } = useAuth();
-  const [certificates, setCertificates] = useState(mockCertificatesDB);
+  const queryClient = useQueryClient();
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [viewCertificate, setViewCertificate] = useState<any | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
+  const { data: response, isLoading, isFetching } = useQuery({
+    queryKey: ['certificates-admin', currentPage, itemsPerPage, debouncedSearchQuery],
+    queryFn: () => certificatesService.getCertificates({ page: currentPage, limit: itemsPerPage, search: debouncedSearchQuery }),
+    enabled: !!user && user.role === 'admin',
+  });
+
+  const certificates = response?.data || [];
+  const totalItems = response?.total || 0;
+  const totalPages = response?.totalPages || 0;
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => certificatesService.revokeCertificate(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['certificates-admin'] });
+      queryClient.invalidateQueries({ queryKey: ['my-certificates'] });
+      setDeleteConfirmId(null);
+    }
+  });
 
   const handleDownloadPDF = async () => {
     if (!viewCertificate) return;
-    const student = mockUsersDB.find(u => u.id === viewCertificate.studentId);
-    const course = mockCourses.find(c => c.id === viewCertificate.courseId);
     setIsGeneratingPdf(true);
-    await generateCertificatePDF(
-      {
-        studentName: student?.name || "Unknown",
-        courseTitle: course?.title || "Unknown",
-        issueDate: viewCertificate.issueDate,
-        certificateId: viewCertificate.certificateId,
-      },
-      `Certificate-${viewCertificate.certificateId}.pdf`
-    );
-    setIsGeneratingPdf(false);
+    try {
+      await generateCertificatePDF(
+        {
+          studentName: viewCertificate.student?.name || "Unknown",
+          courseTitle: viewCertificate.course?.title || "Unknown",
+          issueDate: new Date(viewCertificate.issueDate).toISOString().split('T')[0],
+          certificateId: viewCertificate.certificateId,
+        },
+        `Certificate-${viewCertificate.certificateId}.pdf`
+      );
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const confirmDelete = (id: string) => {
-    setCertificates(prev => prev.filter(c => c.id !== id));
-    // Also mutate the mock array so it persists in the session
-    const idx = mockCertificatesDB.findIndex(c => c.id === id);
-    if (idx > -1) mockCertificatesDB.splice(idx, 1);
-    setDeleteConfirmId(null);
+    deleteMutation.mutate(id);
   };
 
   const handleDeleteClick = (id: string) => {
@@ -63,20 +86,15 @@ export default function IssueCertificatePage() {
     );
   }
 
-  const filteredCertificates = certificates.filter(cert => {
-    const student = mockUsersDB.find(u => u.id === cert.studentId);
-    const course = mockCourses.find(c => c.id === cert.courseId);
-    const query = searchQuery.toLowerCase();
-    
+  if (isLoading) {
     return (
-      cert.certificateId.toLowerCase().includes(query) ||
-      (student && student.name.toLowerCase().includes(query)) ||
-      (course && course.title.toLowerCase().includes(query))
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
+      </div>
     );
-  });
+  }
 
-  const totalPages = Math.ceil(filteredCertificates.length / itemsPerPage);
-  const paginatedCertificates = filteredCertificates.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
 
   return (
     <div className="w-full pb-12 ">
@@ -127,16 +145,22 @@ export default function IssueCertificatePage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/50">
-              {paginatedCertificates.length === 0 ? (
+              {isFetching || isLoading ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-8">
+                    <Loader text="Loading certificates..." />
+                  </td>
+                </tr>
+              ) : certificates.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">
                     No certificates found.
                   </td>
                 </tr>
               ) : (
-                paginatedCertificates.map((cert, index) => {
-                  const student = mockUsersDB.find(u => u.id === cert.studentId);
-                  const course = mockCourses.find(c => c.id === cert.courseId);
+                certificates.map((cert: any, index: number) => {
+                  const student = cert.student;
+                  const course = cert.course;
                   const serialNumber = (currentPage - 1) * itemsPerPage + index + 1;
 
                   return (
@@ -149,7 +173,7 @@ export default function IssueCertificatePage() {
                       </td>
                       <td className="px-6 py-4 font-medium text-white flex items-center whitespace-nowrap">
                         <div className="w-8 h-8 rounded-full bg-cyan-900 flex items-center justify-center text-cyan-400 font-bold mr-3 shrink-0">
-                          {student?.name.charAt(0) || "?"}
+                          {student?.name?.charAt(0) || "?"}
                         </div>
                         {student?.name || "Unknown Student"}
                       </td>
@@ -157,7 +181,7 @@ export default function IssueCertificatePage() {
                         {course?.title || "Unknown Course"}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        {cert.issueDate}
+                        {new Date(cert.issueDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-right flex justify-end items-center gap-1 whitespace-nowrap">
                         <Button 
@@ -187,11 +211,11 @@ export default function IssueCertificatePage() {
         </div>
       </div>
 
-      {filteredCertificates.length > 0 && (
+      {certificates.length > 0 && (
         <Pagination 
             currentPage={currentPage} 
             totalPages={totalPages} 
-            totalItems={filteredCertificates.length} 
+            totalItems={totalItems} 
             itemsPerPage={itemsPerPage} 
             onPageChange={setCurrentPage} 
             onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1); }} 
@@ -206,14 +230,17 @@ export default function IssueCertificatePage() {
             <div className="flex justify-end gap-3">
               <button 
                 onClick={() => setDeleteConfirmId(null)}
-                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-[13px] font-medium rounded-lg transition-colors"
+                disabled={deleteMutation.isPending}
+                className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
               <button 
                 onClick={() => confirmDelete(deleteConfirmId)}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-[13px] font-bold rounded-lg transition-colors shadow-[0_0_10px_rgba(239,68,68,0.3)]"
+                disabled={deleteMutation.isPending}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-[13px] font-bold rounded-lg transition-colors shadow-[0_0_10px_rgba(239,68,68,0.3)] disabled:opacity-50 flex items-center"
               >
+                {deleteMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                 Yes, Revoke
               </button>
             </div>
@@ -222,8 +249,8 @@ export default function IssueCertificatePage() {
       )}
 
       {viewCertificate && (() => {
-        const student = mockUsersDB.find(u => u.id === viewCertificate.studentId);
-        const course = mockCourses.find(c => c.id === viewCertificate.courseId);
+        const student = viewCertificate.student;
+        const course = viewCertificate.course;
         
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
@@ -256,7 +283,7 @@ export default function IssueCertificatePage() {
                 </div>
                 <div>
                   <p className="text-[11px] text-zinc-500 uppercase font-semibold tracking-wider mb-1">Date of Issue</p>
-                  <p className="text-zinc-300 text-[14px]">{viewCertificate.issueDate}</p>
+                  <p className="text-zinc-300 text-[14px]">{new Date(viewCertificate.issueDate).toLocaleDateString()}</p>
                 </div>
               </div>
               
@@ -274,7 +301,7 @@ export default function IssueCertificatePage() {
                 >
                   {isGeneratingPdf ? (
                     <span className="flex items-center">
-                      <div className="w-4 h-4 border-2 border-zinc-950/20 border-t-zinc-950 rounded-full animate-spin mr-2" />
+                      <Loader2 className="w-4 h-4 animate-spin mr-2" />
                       Saving...
                     </span>
                   ) : (

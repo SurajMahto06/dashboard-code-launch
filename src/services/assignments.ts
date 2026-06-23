@@ -2,9 +2,17 @@ import { api } from "@/lib/axios";
 import { API_ENDPOINTS } from "@/config/endpoints";
 import { Assignment } from "@/types";
 
+export interface PaginatedAssignments {
+  data: Assignment[];
+  total: number;
+  page: number;
+  totalPages: number;
+  limit: number;
+}
+
 export const assignmentsService = {
-  async getAssignments(): Promise<Assignment[]> {
-    const response = await api.get(API_ENDPOINTS.ASSIGNMENTS.ROOT);
+  async getAssignments(params?: { page?: number; limit?: number; search?: string }): Promise<PaginatedAssignments> {
+    const response = await api.get(API_ENDPOINTS.ASSIGNMENTS.ROOT, { params });
     return response.data;
   },
 

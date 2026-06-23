@@ -138,10 +138,10 @@ export const generateCertificatePDF = async (
     pdf.setFont("helvetica", "bold");
     pdf.setFontSize(18);
     pdf.setTextColor(...hexRGB(WHITE));
-    pdf.text("CL", W / 2, logoY + 23, { align: "center" });
+    pdf.text("PK", W / 2, logoY + 23, { align: "center" });
 
     // Company name
-    centreText(pdf, "CODELAUNCH TECHNOLOGIES", logoY + 56, {
+    centreText(pdf, "PROKODEX TECHNOLOGIES", logoY + 56, {
       size: 11,
       color: NAVY,
       style: "bold",
@@ -257,7 +257,7 @@ export const generateCertificatePDF = async (
     pdf.text("HEAD OF ENGINEERING", W - 168, footerY + 36, { align: "center" });
 
     // ── 7. QR Code (centre bottom) ──────────────
-    const baseVerifyUrl = process.env.NEXT_PUBLIC_VERIFY_URL || "https://code-launch-gray.vercel.app/verify";
+    const baseVerifyUrl = process.env.NEXT_PUBLIC_VERIFY_URL || "https://prokodex.vercel.app/verify";
     const verifyUrl = `${baseVerifyUrl}?id=${certificateId}`;
     const qrDataUrl = await QRCodeLib.toDataURL(verifyUrl, {
       width: 200,

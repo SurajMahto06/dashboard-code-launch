@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { FileText, Check, X, ExternalLink, Plus, BookOpen, User as UserIcon, Calendar, Clock, Upload, GitBranch, Download, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { FileText, Check, X, ExternalLink, Plus, BookOpen, User as UserIcon, Calendar, Clock, Upload, GitBranch, Download, Trash2, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { usersService } from "@/services/users";
 import { coursesService } from "@/services/courses";
 import { Assignment } from "@/types";
@@ -12,19 +12,28 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Pagination } from "@/components/ui/pagination";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useDebounce } from "@/hooks/use-debounce";
+import { Loader } from "@/components/ui/loader";
 
 export default function AssignmentsPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const { data: assignments = [], isLoading } = useQuery({
-    queryKey: ['assignments'],
-    queryFn: () => assignmentsService.getAssignments(),
-    enabled: !!user
-  });
-  const [assignmentToDelete, setAssignmentToDelete] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'review' | 'assign'>('review');
+  const [assignmentToDelete, setAssignmentToDelete] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
+  const { data: response, isLoading, isFetching } = useQuery({
+    queryKey: ['assignments', currentPage, itemsPerPage, debouncedSearchQuery],
+    queryFn: () => assignmentsService.getAssignments({ page: currentPage, limit: itemsPerPage, search: debouncedSearchQuery }),
+    enabled: !!user
+  });
+
+  const assignments = response?.data || [];
+  const totalItems = response?.total || 0;
+  const totalPagesServer = response?.totalPages || 0;
 
   // Form State for Mentor Assigning
   const [selectedStudentId, setSelectedStudentId] = useState("");
@@ -164,7 +173,7 @@ export default function AssignmentsPage() {
 
   // Render Student View
   if (user.role === "student") {
-    const myAssignments = assignments.filter(a => a.studentId === user.id);
+    const myAssignments = assignments;
 
     return (
       <div className="w-full pb-12 ">
@@ -245,6 +254,17 @@ export default function AssignmentsPage() {
             ))
           )}
         </div>
+
+        {myAssignments.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPagesServer}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1); }}
+          />
+        )}
 
         {/* Submission Modal */}
         {submittingId && (
@@ -342,9 +362,7 @@ export default function AssignmentsPage() {
   }
 
   // Render Mentor View
-  const mentorAssignments = assignments.filter(a => a.mentorId === user.id);
-  const totalPages = Math.ceil(mentorAssignments.length / itemsPerPage);
-  const paginatedAssignments = mentorAssignments.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const mentorAssignments = assignments;
 
   return (
     <div className="w-full pb-12 ">
@@ -357,20 +375,39 @@ export default function AssignmentsPage() {
           <p className="text-xs sm:text-[13px] lg:text-sm text-zinc-400">Assign tasks and review student project submissions.</p>
         </div>
 
-        {/* Tabs */}
-        <div className="inline-flex bg-zinc-900 p-1 border border-zinc-800 rounded-lg">
-          <button
-            onClick={() => setActiveTab('review')}
-            className={`px-4 py-2 text-xs sm:text-[13px] lg:text-sm font-medium rounded-md transition-all ${activeTab === 'review' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'}`}
-          >
-            Review Submissions
-          </button>
-          <button
-            onClick={() => setActiveTab('assign')}
-            className={`px-4 py-2 text-xs sm:text-[13px] lg:text-sm font-medium rounded-md transition-all flex items-center ${activeTab === 'assign' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'}`}
-          >
-            <Plus className="w-4 h-4 mr-1" /> New Assignment
-          </button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
+          {activeTab === 'review' && (
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search className="h-4 w-4 text-zinc-500" />
+              </div>
+              <input
+                type="text"
+                className="w-full sm:w-64 pl-9 pr-4 py-2 bg-zinc-900 border border-zinc-800 rounded-lg text-xs sm:text-[13px] lg:text-sm text-white focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all"
+                placeholder="Search assignments..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+          )}
+          {/* Tabs */}
+          <div className="inline-flex bg-zinc-900 p-1 border border-zinc-800 rounded-lg">
+            <button
+              onClick={() => setActiveTab('review')}
+              className={`px-4 py-2 text-xs sm:text-[13px] lg:text-sm font-medium rounded-md transition-all ${activeTab === 'review' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'}`}
+            >
+              Review Submissions
+            </button>
+            <button
+              onClick={() => setActiveTab('assign')}
+              className={`px-4 py-2 text-xs sm:text-[13px] lg:text-sm font-medium rounded-md transition-all flex items-center ${activeTab === 'assign' ? 'bg-zinc-800 text-white shadow' : 'text-zinc-400 hover:text-white'}`}
+            >
+              <Plus className="w-4 h-4 mr-1" /> New Assignment
+            </button>
+          </div>
         </div>
       </div>
 
@@ -468,14 +505,20 @@ export default function AssignmentsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/50">
-                  {paginatedAssignments.length === 0 ? (
+                  {isFetching || isLoading ? (
+                    <tr>
+                      <td colSpan={5} className="text-center py-8">
+                        <Loader text="Loading assignments..." />
+                      </td>
+                    </tr>
+                  ) : mentorAssignments.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-6 py-8 text-center text-zinc-500 whitespace-nowrap">
                         No assignments found. Use the 'New Assignment' tab to create one.
                       </td>
                     </tr>
                   ) : (
-                    paginatedAssignments.map((assignment, index) => {
+                    mentorAssignments.map((assignment, index) => {
                       const studentName = assignment.student?.name || 'Unknown';
                       const courseName = assignment.course?.title || 'Unknown';
                       const serialNumber = (currentPage - 1) * itemsPerPage + index + 1;
@@ -566,8 +609,8 @@ export default function AssignmentsPage() {
           {mentorAssignments.length > 0 && (
             <Pagination
               currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={mentorAssignments.length}
+              totalPages={totalPagesServer}
+              totalItems={totalItems}
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
               onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1); }}

@@ -5,6 +5,7 @@ import { User, Role } from "@/types";
 import { authService } from "@/services/auth";
 import { Loader2 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Loader } from "@/components/ui/loader";
 
 interface AuthContextType {
   user: User | null;
@@ -48,8 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   if (!mounted || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-zinc-950">
-        <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
+      <div className="min-h-screen w-full flex items-center justify-center bg-zinc-950">
+        <Loader text="Loading application..." />
       </div>
     );
   }

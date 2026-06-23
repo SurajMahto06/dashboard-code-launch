@@ -7,6 +7,7 @@ import { useQuery } from "@tanstack/react-query";
 import { coursesService } from "@/services/courses";
 import { usersService } from "@/services/users";
 import { qaService } from "@/services/qa";
+import { statsService } from "@/services/stats";
 import { PlayCircle, Award, Clock, Users, BookOpen, MessageSquare, Activity, ChevronDown, ChevronRight, FileText } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
@@ -40,17 +41,17 @@ export default function DashboardOverview() {
 }
 
 function AdminDashboard() {
-  const { user } = useAuth();
-  const { data: users = [] } = useQuery({ queryKey: ["users"], queryFn: () => usersService.getUsers() });
-  const { data: courses = [] } = useQuery({ queryKey: ["courses"], queryFn: () => coursesService.getCourses() });
-  const { data: qaThreads = [] } = useQuery<any[]>({ queryKey: ["qaThreads", "list", user?.id], queryFn: () => qaService.getQAThreads() });
+  const { data: stats } = useQuery({
+    queryKey: ["dashboard-stats"],
+    queryFn: () => statsService.getStats(),
+  });
 
   return (
     <div className="space-y-8">
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard icon={Users} label="Total Users" value={users.length.toString()} />
-        <StatCard icon={BookOpen} label="Active Courses" value={courses.length.toString()} />
-        <StatCard icon={MessageSquare} label="Open Q&A" value={qaThreads.filter((q: any) => q.status === 'pending').length.toString()} />
+        <StatCard icon={Users} label="Total Users" value={stats?.totalUsers?.toString() || "0"} />
+        <StatCard icon={BookOpen} label="Active Courses" value={stats?.totalCourses?.toString() || "0"} />
+        <StatCard icon={MessageSquare} label="Open Q&A" value={stats?.pendingQA?.toString() || "0"} />
         <StatCard icon={Activity} label="System Health" value="100%" color="text-green-400" bg="bg-green-950" />
       </div>
 

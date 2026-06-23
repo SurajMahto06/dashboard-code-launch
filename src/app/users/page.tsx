@@ -13,6 +13,8 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersService } from "@/services/users";
 import { coursesService } from "@/services/courses";
+import { useDebounce } from "@/hooks/use-debounce";
+import { Loader } from "@/components/ui/loader";
 
 export default function UsersPage() {
   const { user } = useAuth();
@@ -20,12 +22,17 @@ export default function UsersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
 
-  const { data: usersList = [], isLoading: isLoadingUsers } = useQuery({
-    queryKey: ['users'],
-    queryFn: () => usersService.getUsers(),
+  const { data: response, isLoading: isLoadingUsers, isFetching } = useQuery({
+    queryKey: ['users', currentPage, itemsPerPage, debouncedSearchQuery],
+    queryFn: () => usersService.getUsers({ page: currentPage, limit: itemsPerPage, search: debouncedSearchQuery }),
     enabled: user?.role === "admin",
   });
+
+  const usersList = response?.data || [];
+  const totalItems = response?.total || 0;
+  const totalPages = response?.totalPages || 0;
 
   const { data: courses = [], isLoading: isLoadingCourses } = useQuery({
     queryKey: ['courses'],
@@ -89,13 +96,6 @@ export default function UsersPage() {
     );
   }
 
-  const filteredUsers = usersList.filter((u: any) => 
-    (u.name || "").toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (u.email || "").toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-  const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
   return (
     <div className="w-full pb-12 ">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
@@ -147,20 +147,20 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800/50">
-              {isLoading ? (
+              {isFetching || isLoadingUsers ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-zinc-500">
-                    <Loader2 className="w-6 h-6 animate-spin mx-auto text-cyan-500" />
+                  <td colSpan={8} className="text-center py-8">
+                    <Loader text="Loading users..." />
                   </td>
                 </tr>
-              ) : paginatedUsers.length === 0 ? (
+              ) : usersList.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-8 text-center text-zinc-500">
                     No users found.
                   </td>
                 </tr>
               ) : (
-                paginatedUsers.map((u: any, index: number) => {
+                usersList.map((u: any, index: number) => {
                   const serialNumber = (currentPage - 1) * itemsPerPage + index + 1;
                   return (
                     <tr key={u.id} className="hover:bg-zinc-800/30 transition-colors">
@@ -215,9 +215,9 @@ export default function UsersPage() {
                             <Edit className="w-4 h-4" />
                           </Button>
                         </Link>
-                        <Button 
-                          variant="danger" 
-                          size="icon" 
+                        <Button
+                          variant="danger"
+                          size="icon"
                           onClick={() => handleDelete(u.id)}
                           disabled={deleteMutation.isPending || u.id === user.id}
                         >
@@ -233,15 +233,15 @@ export default function UsersPage() {
         </div>
       </div>
 
-      {filteredUsers.length > 0 && (
-        <Pagination 
-            currentPage={currentPage} 
-            totalPages={totalPages} 
-            totalItems={filteredUsers.length} 
-            itemsPerPage={itemsPerPage} 
-            onPageChange={setCurrentPage} 
-            onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1); }} 
-          />
+      {usersList.length > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1); }}
+        />
       )}
 
       <ConfirmModal

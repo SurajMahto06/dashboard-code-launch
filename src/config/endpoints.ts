@@ -34,5 +34,14 @@ export const API_ENDPOINTS = {
     ROOT: '/upload',
     IMAGE: '/upload/image',
     VIDEO: '/upload/video',
+  },
+  CERTIFICATES: {
+    ROOT: '/certificates',
+    BY_ID: (id: string) => `/certificates/${id}`,
+    VERIFY: (id: string) => `/certificates/verify/${id}`,
+    ISSUE: '/certificates/issue',
+  },
+  STATS: {
+    ROOT: '/stats',
   }
 };

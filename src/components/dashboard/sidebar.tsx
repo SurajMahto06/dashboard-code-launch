@@ -69,7 +69,7 @@ export function DashboardSidebar({ isOpen, setIsOpen }: { isOpen?: boolean, setI
         <div className="flex h-16 items-center justify-between px-6 ">
           <div className="flex items-center">
             <Video className="h-6 w-6 text-cyan-400 mr-2" />
-            <span className="text-base sm:text-lg font-bold text-white">Elite Portal</span>
+            <span className="text-base sm:text-lg font-bold text-white">Prokodex</span>
           </div>
           <button onClick={() => setIsOpen?.(false)} className="lg:hidden text-zinc-400 hover:text-white">
             <X className="h-6 w-6" />

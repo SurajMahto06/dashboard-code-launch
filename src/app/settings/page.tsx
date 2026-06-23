@@ -36,11 +36,11 @@ export default function SettingsPage() {
           <div className="p-4 sm:p-6 space-y-6">
             <div>
               <label className="block text-[13px] font-medium text-zinc-300 mb-1.5">Platform Name</label>
-              <input type="text" defaultValue="Elite Mentorship Portal" className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-[13px] text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all" />
+              <input type="text" defaultValue="Prokodex Mentorship Portal" className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-[13px] text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all" />
             </div>
             <div>
               <label className="block text-[13px] font-medium text-zinc-300 mb-1.5">Support Email</label>
-              <input type="email" defaultValue="support@elite.com" className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-[13px] text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all" />
+              <input type="email" defaultValue="support@prokodex.com" className="w-full px-4 py-2.5 bg-zinc-950 border border-zinc-800 rounded-lg text-[13px] text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500 transition-all" />
             </div>
           </div>
         </section>

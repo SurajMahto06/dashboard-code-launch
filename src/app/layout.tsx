@@ -1,20 +1,18 @@
 import type { Metadata } from "next";
-import { Inter, Roboto } from "next/font/google";
+import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/dashboard/auth-provider";
 import { AppLayout } from "@/components/dashboard/app-layout";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ReactQueryProvider } from "@/lib/query-provider";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const roboto = Roboto({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  weight: ["400", "500", "700", "900"],
-  variable: "--font-roboto"
+  variable: "--font-space-grotesk",
 });
 
 export const metadata: Metadata = {
-  title: "Elite Mentorship | Code Launch Dashboard",
+  title: "Elite Mentorship | Prokodex Dashboard",
   description: "Video Portal and Mentorship Dashboard",
 };
 
@@ -25,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${roboto.variable} font-sans bg-zinc-950 text-zinc-100 flex h-[100dvh] overflow-hidden`}>
+      <body className={`${spaceGrotesk.variable} font-sans bg-zinc-950 text-zinc-100 flex h-[100dvh] overflow-hidden`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { ShieldAlert, Award, CheckCircle } from "lucide-react";
-import { mockCourses, mockUsersDB, mockCertificatesDB } from "@/data/mock-dashboard";
+import { ShieldAlert, Award, CheckCircle, ArrowLeft, Download, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { ArrowLeft, Download } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { generateCertificatePDF } from "@/lib/pdf";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { coursesService } from "@/services/courses";
+import { usersService } from "@/services/users";
+import { certificatesService } from "@/services/certificates";
 
 const certificateSchema = z.object({
   courseId: z.string().min(1, "Course is required"),
@@ -24,19 +25,42 @@ type CertificateValues = z.infer<typeof certificateSchema>;
 
 export default function NewIssueCertificatePage() {
   const { user } = useAuth();
-  const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const [isIssuing, setIsIssuing] = useState(false);
-  const [issuedId, setIssuedId] = useState<string | null>(null);
+  const [issuedCert, setIssuedCert] = useState<any>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const { data: courses = [], isLoading: isLoadingCourses } = useQuery({
+    queryKey: ['courses'],
+    queryFn: () => coursesService.getCourses(),
+    enabled: !!user && user.role === 'admin',
+  });
+
+  const { data: response, isLoading: isLoadingUsers } = useQuery({
+    queryKey: ['users', 'student', 'dropdown'],
+    queryFn: () => usersService.getUsers({ role: 'student', limit: 100 }),
+    enabled: !!user && user.role === 'admin',
+  });
+
+  const users = response?.data || [];
+
+  const issueMutation = useMutation({
+    mutationFn: (data: { studentId: string; courseId: string; dateOfIssue: string; startDate?: string; endDate?: string }) =>
+      certificatesService.issueCertificate(data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['certificates-admin'] });
+      queryClient.invalidateQueries({ queryKey: ['my-certificates'] });
+      setIssuedCert(data);
+    }
+  });
 
   const form = useForm<CertificateValues>({
     resolver: zodResolver(certificateSchema),
     defaultValues: {
       courseId: "",
       studentId: "",
-      startDate: "2026-03",
-      endDate: "2026-06",
+      startDate: new Date().toISOString().substring(0, 7),
+      endDate: new Date().toISOString().substring(0, 7),
       dateOfIssue: new Date().toISOString().split('T')[0].substring(0, 7),
     },
   });
@@ -44,78 +68,49 @@ export default function NewIssueCertificatePage() {
   const selectedCourseId = form.watch("courseId");
 
   const handleDownloadPDF = async () => {
-    if (!issuedId) return;
-    const student = mockUsersDB.find(u => u.id === form.getValues("studentId"));
-    const course = mockCourses.find(c => c.id === form.getValues("courseId"));
+    if (!issuedCert) return;
     setIsGeneratingPdf(true);
-    await generateCertificatePDF(
-      {
-        studentName: student?.name || "Unknown",
-        courseTitle: course?.title || "Unknown",
-        issueDate: form.getValues("dateOfIssue"),
-        certificateId: issuedId,
-      },
-      `Certificate-${issuedId}.pdf`
-    );
-    setIsGeneratingPdf(false);
+    try {
+      await generateCertificatePDF(
+        {
+          studentName: issuedCert.student?.name || "Student",
+          courseTitle: issuedCert.course?.title || "Course",
+          issueDate: new Date(issuedCert.issueDate).toISOString().split('T')[0],
+          certificateId: issuedCert.certificateId,
+        },
+        `Certificate-${issuedCert.certificateId}.pdf`
+      );
+    } catch (error) {
+      console.error("Failed to generate PDF", error);
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   // Filter students based on selected course
-  const availableStudents = mockUsersDB.filter(
-    (u) => u.role === "student" && (!selectedCourseId || u.enrolledCourseIds?.includes(selectedCourseId))
+  const availableStudents = users.filter(
+    (u) => !selectedCourseId || u.enrolledCourseIds?.includes(selectedCourseId)
   );
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    form.setValue(e.target.name as keyof CertificateValues, e.target.value);
-  };
-
   const onSubmit = (data: CertificateValues) => {
-    setIsIssuing(true);
-
-    setTimeout(() => {
-      // Simulate backend ID generation and saving to DB
-      const year = new Date().getFullYear();
-      const student = mockUsersDB.find(u => u.id === data.studentId);
-
-      let initials = "XX";
-      if (student && student.name) {
-        const parts = student.name.trim().split(" ");
-        if (parts.length === 1) {
-          initials = parts[0][0].toUpperCase();
-        } else {
-          initials = parts[0][0].toUpperCase() + parts[parts.length - 1][0].toUpperCase();
-        }
-      }
-
-      const existingCountThisYear = mockCertificatesDB.filter(c => c.certificateId?.includes(`CL-${year}`)).length;
-      const sequence = String(existingCountThisYear + 1).padStart(3, '0');
-
-      const autoId = `CL-${year}-${initials}${sequence}`;
-
-      // Add to mock DB so it shows up in the table
-      const newCert = {
-        id: `cert-${Date.now()}`,
-        studentId: data.studentId,
-        courseId: data.courseId,
-        certificateId: autoId,
-        issueDate: data.dateOfIssue,
-      };
-
-      // In a real app we'd push to backend. For the mock we just mutate the array directly
-      mockCertificatesDB.push(newCert);
-
-      setIssuedId(autoId);
-      setIsIssuing(false);
-    }, 800);
+    // We send a full date string for issueDate
+    const issueDateStr = `${data.dateOfIssue}-01`;
+    issueMutation.mutate({
+      studentId: data.studentId,
+      courseId: data.courseId,
+      dateOfIssue: issueDateStr,
+      startDate: `${data.startDate}-01`,
+      endDate: `${data.endDate}-01`
+    });
   };
 
   const handleReset = () => {
-    setIssuedId(null);
+    setIssuedCert(null);
     form.reset({
       courseId: "",
       studentId: "",
-      startDate: "2026-03",
-      endDate: "2026-06",
+      startDate: new Date().toISOString().substring(0, 7),
+      endDate: new Date().toISOString().substring(0, 7),
       dateOfIssue: new Date().toISOString().split('T')[0].substring(0, 7),
     });
   };
@@ -126,6 +121,14 @@ export default function NewIssueCertificatePage() {
         <ShieldAlert className="w-16 h-16 text-red-500 mb-4" />
         <h1 className="text-lg md:text-2xl font-bold text-white mb-2">Access Denied</h1>
         <p className="text-zinc-400">You must be an administrator to view this page.</p>
+      </div>
+    );
+  }
+
+  if (isLoadingCourses || isLoadingUsers) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="w-8 h-8 text-cyan-500 animate-spin" />
       </div>
     );
   }
@@ -145,13 +148,13 @@ export default function NewIssueCertificatePage() {
       </div>
 
       <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-8 shadow-xl max-w-4xl">
-        {issuedId ? (
+        {issuedCert ? (
           <div className="flex flex-col sm:flex-row items-center justify-between p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
             <div className="flex items-center text-left mb-4 sm:mb-0">
               <CheckCircle className="w-12 h-12 text-emerald-400 mr-4 shrink-0" />
               <div>
                 <h2 className="text-lg font-bold text-white">Certificate Successfully Issued</h2>
-                <p className="text-zinc-400 text-sm mt-1">Generated ID: <span className="font-mono text-cyan-400 font-bold ml-1">{issuedId}</span></p>
+                <p className="text-zinc-400 text-sm mt-1">Generated ID: <span className="font-mono text-cyan-400 font-bold ml-1">{issuedCert.certificateId}</span></p>
               </div>
             </div>
             <div className="flex gap-3">
@@ -173,7 +176,7 @@ export default function NewIssueCertificatePage() {
               >
                 {isGeneratingPdf ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-zinc-950/20 border-t-zinc-950 rounded-full animate-spin mr-2" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Saving...
                   </>
                 ) : (
@@ -200,7 +203,7 @@ export default function NewIssueCertificatePage() {
                   className={`w-full px-4 py-2.5 bg-zinc-950 border rounded-lg text-[13px] text-white focus:outline-none focus:ring-1 transition-all appearance-none cursor-pointer ${form.formState.errors.courseId ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-zinc-800 focus:border-cyan-500 focus:ring-cyan-500'}`}
                 >
                   <option value="" disabled>-- Select a completed course --</option>
-                  {mockCourses.map(course => (
+                  {courses.map(course => (
                     <option key={course.id} value={course.id}>{course.title}</option>
                   ))}
                 </select>
@@ -254,15 +257,19 @@ export default function NewIssueCertificatePage() {
               </div>
             </div>
 
+            {issueMutation.isError && (
+              <p className="text-sm text-red-500 mt-4">Failed to issue certificate. Please try again.</p>
+            )}
+
             <div className="pt-6 border-t border-zinc-800 flex justify-end">
               <button
                 type="submit"
-                disabled={isIssuing}
+                disabled={issueMutation.isPending}
                 className="flex items-center px-6 py-2.5 text-[13px] bg-cyan-400 hover:bg-cyan-500 text-zinc-950 font-bold rounded-lg transition-colors shadow-[0_0_20px_rgba(8,145,178,0.3)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
-                {isIssuing ? (
+                {issueMutation.isPending ? (
                   <span className="flex items-center">
-                    <div className="w-4 h-4 border-2 border-zinc-950/20 border-t-zinc-950 rounded-full animate-spin mr-2" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Generating...
                   </span>
                 ) : (

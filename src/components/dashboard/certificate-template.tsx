@@ -10,7 +10,7 @@ export interface CertificateTemplateProps {
 
 export const CertificateTemplate = React.forwardRef<HTMLDivElement, CertificateTemplateProps>(
   ({ studentName, courseTitle, issueDate, certificateId }, ref) => {
-    const verifyUrl = `https://codelaunch.com/verify?id=${certificateId}`;
+    const verifyUrl = `https://prokodex.com/verify?id=${certificateId}`;
 
     return (
       <div
@@ -38,7 +38,7 @@ export const CertificateTemplate = React.forwardRef<HTMLDivElement, CertificateT
         {/* Faded Background Pattern / Watermark */}
         <div className="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none">
           <div className="w-[500px] h-[500px] rounded-full border-[20px] border-[#000000] flex items-center justify-center">
-            <span className="text-[200px] font-black text-[#000000]" style={{ fontFamily: "Georgia, serif" }}>CL</span>
+            <span className="text-[200px] font-black text-[#000000]" style={{ fontFamily: "Georgia, serif" }}>PK</span>
           </div>
         </div>
 

@@ -2,6 +2,14 @@ import { api } from "@/lib/axios";
 import { User } from "@/types";
 import { API_ENDPOINTS } from "@/config/endpoints";
 
+export interface PaginatedUsers {
+  data: User[];
+  total: number;
+  page: number;
+  totalPages: number;
+  limit: number;
+}
+
 export const usersService = {
   async getMyMentees(): Promise<User[]> {
     const response = await api.get(API_ENDPOINTS.ME.MENTEES);
@@ -21,14 +29,18 @@ export const usersService = {
     return response.data;
   },
 
-  async getUsers(params?: { role?: string; status?: string; search?: string }): Promise<User[]> {
+  async getUsers(params?: { role?: string; status?: string; search?: string; page?: number; limit?: number }): Promise<PaginatedUsers> {
     const response = await api.get(API_ENDPOINTS.USERS.ROOT, { params });
-    return response.data.map((user: any) => ({
+    const formattedData = response.data.data.map((user: any) => ({
       ...user,
       role: user.role.toLowerCase(),
       enrolledCourseIds: user.enrolledCourses?.map((c: any) => c.id) || [],
       assignedCourseIds: user.assignedCourses?.map((c: any) => c.id) || []
     }));
+    return {
+      ...response.data,
+      data: formattedData
+    };
   },
 
   async getUserById(id: string): Promise<User> {
