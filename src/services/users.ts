@@ -29,7 +29,7 @@ export const usersService = {
     return response.data;
   },
 
-  async getUsers(params?: { role?: string; status?: string; search?: string; page?: number; per_page?: number }): Promise<PaginatedUsers> {
+  async getUsers(params?: { role?: string; status?: string; search?: string; page?: number; per_page?: number; paginate?: string | boolean }): Promise<PaginatedUsers> {
     const response = await api.get(API_ENDPOINTS.USERS.ROOT, { params });
     const formattedData = response.data.data.map((user: any) => ({
       ...user,

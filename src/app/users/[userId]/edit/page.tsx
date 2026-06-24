@@ -22,7 +22,7 @@ const userSchema = z.object({
   password: z.string().optional(),
   role: z.enum(["student", "mentor", "admin"]),
   status: z.enum(["active", "pending", "inactive"]),
-  plan: z.enum(["premium", "elite"]).optional(),
+  plan: z.enum(["premium", "elite", "standard"]).optional(),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -186,35 +186,36 @@ export default function EditUserPage({ params }: { params: Promise<{ userId: str
               <FormInput name="name" label="Full Name" placeholder="John Doe" />
               <FormInput name="email" label="Email Address" type="email" placeholder="john@example.com" />
               <FormInput name="password" label="New Password (Leave blank to keep current)" type="password" placeholder="••••••••" />
-              
-              <FormSelect 
-                name="role" 
-                label="Account Role" 
+
+              <FormSelect
+                name="role"
+                label="Account Role"
                 options={[
                   { label: "Student", value: "student" },
                   { label: "Mentor", value: "mentor" },
                   { label: "Administrator", value: "admin" }
-                ]} 
+                ]}
               />
 
-              <FormSelect 
-                name="status" 
-                label="Account Status" 
+              <FormSelect
+                name="status"
+                label="Account Status"
                 options={[
                   { label: "Active", value: "active" },
                   { label: "Pending", value: "pending" },
                   { label: "Inactive", value: "inactive" }
-                ]} 
+                ]}
               />
 
               {selectedRole === "student" && (
-                <FormSelect 
-                  name="plan" 
-                  label="Subscription Plan" 
+                <FormSelect
+                  name="plan"
+                  label="Subscription Plan"
                   options={[
                     { label: "Premium Plan", value: "premium" },
-                    { label: "Elite Mentorship Plan", value: "elite" }
-                  ]} 
+                    { label: "Elite Plan", value: "elite" },
+                    { label: "Standard Plan", value: "standard" }
+                  ]}
                 />
               )}
             </div>

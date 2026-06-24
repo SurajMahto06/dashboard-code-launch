@@ -22,7 +22,7 @@ const userSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   role: z.enum(["student", "mentor", "admin"]),
   status: z.enum(["active", "pending", "inactive"]),
-  plan: z.enum(["premium", "elite"]).optional(),
+  plan: z.enum(["premium", "elite", "standard"]).optional(),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;
@@ -159,7 +159,8 @@ export default function NewUserPage() {
                   label="Subscription Plan" 
                   options={[
                     { label: "Premium Plan", value: "premium" },
-                    { label: "Elite Mentorship Plan", value: "elite" }
+                    { label: "Elite Mentorship Plan", value: "elite" },
+                    { label: "Standard Plan", value: "standard" }
                   ]} 
                 />
               )}

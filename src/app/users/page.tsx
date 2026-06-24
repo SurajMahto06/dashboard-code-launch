@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/components/dashboard/auth-provider";
-import { Users as UsersIcon, Search, ShieldAlert, Edit, Trash2, Plus, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { Users as UsersIcon, Search, ShieldAlert, Edit, Trash2, Plus, ChevronLeft, ChevronRight, Loader2, Download } from "lucide-react";
 import { AccessDenied } from "@/components/ui/access-denied";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import { usersService } from "@/services/users";
 import { coursesService } from "@/services/courses";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Loader } from "@/components/ui/loader";
+import { downloadCSV } from "@/lib/export";
 
 export default function UsersPage() {
   const { user } = useAuth();
@@ -56,6 +57,42 @@ export default function UsersPage() {
 
   const handleDelete = (id: string) => {
     setUserToDelete(id);
+  };
+
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportUsers = async () => {
+    try {
+      setIsExporting(true);
+      // Fetch all users
+      const response = await usersService.getUsers({ paginate: 'false', search: debouncedSearchQuery });
+      const allUsers = response.data || [];
+      
+      // Format data for Excel
+      const exportData = allUsers.map((u: any) => {
+        const enrolledTitles = (u.enrolledCourseIds || []).map((id: string) => courses.find((c: any) => c.id === id)?.title || `Unknown Course (${id})`).join(', ');
+        const assignedTitles = (u.assignedCourseIds || []).map((id: string) => courses.find((c: any) => c.id === id)?.title || `Unknown Course (${id})`).join(', ');
+
+        return {
+          "ID": u.id,
+          "Name": u.name,
+          "Email": u.email,
+          "Role": u.role,
+          "Plan": u.plan || "none",
+          "Status": u.status || "active",
+          "Progress Percentage": u.progressPercentage,
+          "Enrolled Courses": enrolledTitles,
+          "Assigned Courses (Mentor)": assignedTitles,
+          "Created At": new Date(u.createdAt).toLocaleString(),
+        };
+      });
+
+      downloadCSV(exportData, `Users_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    } catch (error) {
+      console.error("Error exporting users:", error);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const getCourseBadges = (courseIds: string[] | undefined, role: string) => {
@@ -118,6 +155,15 @@ export default function UsersPage() {
               }}
             />
           </div>
+          <Button 
+            variant="outline" 
+            className="shrink-0 bg-zinc-900 border-zinc-800 text-white hover:bg-zinc-800"
+            onClick={handleExportUsers}
+            disabled={isExporting || usersList.length === 0}
+          >
+            {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+            Export Excel
+          </Button>
           <Link href="/users/new" tabIndex={-1}>
             <Button className="shrink-0">
               <Plus className="w-5 h-5 mr-1" />

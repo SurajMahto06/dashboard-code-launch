@@ -13,6 +13,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { certificatesService } from "@/services/certificates";
 import { useDebounce } from "@/hooks/use-debounce";
 import { Loader } from "@/components/ui/loader";
+import { downloadCSV } from "@/lib/export";
 
 export default function IssueCertificatePage() {
   const { user } = useAuth();
@@ -76,6 +77,35 @@ export default function IssueCertificatePage() {
     setDeleteConfirmId(id);
   };
 
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportCertificates = async () => {
+    try {
+      setIsExporting(true);
+      // Fetch all certificates
+      const response = await certificatesService.getCertificates({ paginate: 'false', search: debouncedSearchQuery });
+      const allCerts = response.data || [];
+      
+      // Format data for Excel
+      const exportData = allCerts.map((cert: any) => ({
+        "ID": cert.id,
+        "Certificate ID": cert.certificateId,
+        "Student Name": cert.student?.name || "Unknown",
+        "Student Email": cert.student?.email || "Unknown",
+        "Course/Track": cert.course?.title || "Unknown",
+        "Issue Date": new Date(cert.issueDate).toLocaleDateString(),
+        "Start Date": cert.startDate ? new Date(cert.startDate).toLocaleDateString() : "",
+        "End Date": cert.endDate ? new Date(cert.endDate).toLocaleDateString() : "",
+      }));
+
+      downloadCSV(exportData, `Certificates_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    } catch (error) {
+      console.error("Error exporting certificates:", error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleView = (cert: any) => {
     setViewCertificate(cert);
   };
@@ -120,6 +150,15 @@ export default function IssueCertificatePage() {
               }}
             />
           </div>
+          <Button 
+            variant="outline" 
+            className="shrink-0 bg-zinc-900 border-zinc-800 text-white hover:bg-zinc-800"
+            onClick={handleExportCertificates}
+            disabled={isExporting || certificates.length === 0}
+          >
+            {isExporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+            Export Excel
+          </Button>
           <Link href="/issue-certificate/new" tabIndex={-1}>
             <Button className="shrink-0 bg-cyan-500 hover:bg-cyan-600 text-zinc-950 font-bold shadow-[0_0_15px_rgba(8,145,178,0.3)]">
               <Plus className="w-5 h-5 mr-1" />
