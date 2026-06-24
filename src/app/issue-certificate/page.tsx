@@ -17,7 +17,7 @@ import { Loader } from "@/components/ui/loader";
 export default function IssueCertificatePage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -182,19 +182,19 @@ export default function IssueCertificatePage() {
                         {new Date(cert.issueDate).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-right flex justify-end items-center gap-1 whitespace-nowrap">
-                        <Button 
+                        <Button
                           onClick={() => handleView(cert)}
-                          variant="ghost" 
-                          size="icon" 
+                          variant="ghost"
+                          size="icon"
                           title="View Certificate"
                         >
                           <Eye className="w-4 h-4 text-zinc-400 hover:text-cyan-400 transition-colors" />
                         </Button>
-                        <Button 
+                        <Button
                           onClick={() => handleDeleteClick(cert.id)}
-                          variant="ghost" 
-                          size="icon" 
-                          title="Revoke Certificate" 
+                          variant="ghost"
+                          size="icon"
+                          title="Revoke Certificate"
                           className="hover:bg-red-500/10 hover:text-red-400"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -210,14 +210,14 @@ export default function IssueCertificatePage() {
       </div>
 
       {certificates.length > 0 && (
-        <Pagination 
-            currentPage={currentPage} 
-            totalPages={totalPages} 
-            totalItems={totalItems} 
-            itemsPerPage={itemsPerPage} 
-            onPageChange={setCurrentPage} 
-            onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1); }} 
-          />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={setCurrentPage}
+          onItemsPerPageChange={(val) => { setItemsPerPage(val); setCurrentPage(1); }}
+        />
       )}
 
       {deleteConfirmId && (
@@ -226,14 +226,14 @@ export default function IssueCertificatePage() {
             <h3 className="text-lg font-bold text-white mb-2">Revoke Certificate</h3>
             <p className="text-sm text-zinc-400 mb-6">Are you sure you want to permanently revoke this certificate? This action cannot be undone.</p>
             <div className="flex justify-end gap-3">
-              <button 
+              <button
                 onClick={() => setDeleteConfirmId(null)}
                 disabled={deleteMutation.isPending}
                 className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 onClick={() => confirmDelete(deleteConfirmId)}
                 disabled={deleteMutation.isPending}
                 className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-[13px] font-bold rounded-lg transition-colors shadow-[0_0_10px_rgba(239,68,68,0.3)] disabled:opacity-50 flex items-center"
@@ -249,13 +249,13 @@ export default function IssueCertificatePage() {
       {viewCertificate && (() => {
         const student = viewCertificate.student;
         const course = viewCertificate.course;
-        
+
         return (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6 md:p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200 relative overflow-hidden">
-              
+
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 to-emerald-500"></div>
-              
+
               <div className="flex justify-between items-start mb-6">
                 <div className="flex items-center">
                   <Award className="w-6 h-6 text-cyan-400 mr-2" />
@@ -265,7 +265,7 @@ export default function IssueCertificatePage() {
                   Secure & Verified
                 </div>
               </div>
-              
+
               <div className="space-y-4 mb-8">
                 <div>
                   <p className="text-[11px] text-zinc-500 uppercase font-semibold tracking-wider mb-1">Certificate ID</p>
@@ -284,15 +284,15 @@ export default function IssueCertificatePage() {
                   <p className="text-zinc-300 text-[14px]">{new Date(viewCertificate.issueDate).toLocaleDateString()}</p>
                 </div>
               </div>
-              
+
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={() => setViewCertificate(null)}
                   className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white text-[13px] font-medium rounded-lg transition-colors border border-zinc-700"
                 >
                   Close
                 </button>
-                <button 
+                <button
                   onClick={handleDownloadPDF}
                   disabled={isGeneratingPdf}
                   className="w-full flex items-center justify-center py-2.5 bg-cyan-500 hover:bg-cyan-600 text-zinc-950 text-[13px] font-bold rounded-lg transition-colors shadow-[0_0_15px_rgba(8,145,178,0.3)] disabled:opacity-50 disabled:cursor-not-allowed"
